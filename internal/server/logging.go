@@ -27,6 +27,8 @@ type chatStat struct {
 	uid    string // 完整 uid，展示时只取前 8 位
 	ttfb   time.Duration
 	toks   int // <0 表示 usage 缺失 → 显示 "-"
+	promptTokens int
+	cachedTokens int
 	status int
 
 	logged bool
@@ -48,6 +50,7 @@ func (s *chatStat) done() {
 	}
 	s.logged = true
 	logChatRow(s.ttfb, time.Since(s.start), s.model, s.mode, s.uid, s.status, s.toks)
+	RecordRequestMetric(s.model, s.mode, s.uid, s.ttfb, time.Since(s.start), s.status, s.promptTokens, s.toks, s.cachedTokens)
 }
 
 // chatStatsReader 在流式透传时抓取 SSE 末帧的 usage.completion_tokens 精确值，
@@ -60,6 +63,8 @@ type chatStatsReader struct {
 	seen     bool // 已见过首个 data 帧（TTFB 只记一次）
 	hasUsage bool // 末帧是否带 usage
 	tokens   int
+	promptTokens int
+	cachedTokens int
 	pend     []byte // 已读未返回的行缓存
 }
 
@@ -73,6 +78,7 @@ func (s *chatStatsReader) TTFB() time.Duration { return s.ttfb }
 
 // Tokens 返回末帧 usage.completion_tokens 与是否缺失；无 usage 时 ok=false。
 func (s *chatStatsReader) Tokens() (int, bool) { return s.tokens, s.hasUsage }
+func (s *chatStatsReader) PromptAndCache() (int, int) { return s.promptTokens, s.cachedTokens }
 
 // parseSSELine 解析一行 "data: {...}"：首帧记 TTFB，含 usage 时采信精确 completion_tokens。
 func (s *chatStatsReader) parseSSELine(line string) {
@@ -90,7 +96,12 @@ func (s *chatStatsReader) parseSSELine(line string) {
 	}
 	var chunk struct {
 		Usage *struct {
-			CompletionTokens int `json:"completion_tokens"`
+			PromptTokens        int `json:"prompt_tokens"`
+			CompletionTokens    int `json:"completion_tokens"`
+			PromptTokensDetails *struct {
+				CachedTokens int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
+			PromptCacheHitTokens int `json:"prompt_cache_hit_tokens"`
 		} `json:"usage"`
 	}
 	if json.Unmarshal([]byte(payload), &chunk) != nil || chunk.Usage == nil {
@@ -98,6 +109,14 @@ func (s *chatStatsReader) parseSSELine(line string) {
 	}
 	s.hasUsage = true
 	s.tokens = chunk.Usage.CompletionTokens
+	s.promptTokens = chunk.Usage.PromptTokens
+	cached := 0
+	if chunk.Usage.PromptTokensDetails != nil && chunk.Usage.PromptTokensDetails.CachedTokens > 0 {
+		cached = chunk.Usage.PromptTokensDetails.CachedTokens
+	} else if chunk.Usage.PromptCacheHitTokens > 0 {
+		cached = chunk.Usage.PromptCacheHitTokens
+	}
+	s.cachedTokens = cached
 }
 
 // Read 返回原始数据，同时解析统计 TTFB/token。
@@ -189,4 +208,24 @@ func logChatRow(ttfb, total time.Duration, model, mode, uid string, status int, 
 		tokpsField,
 		total.Seconds(),
 	)
+}
+
+func promptAndCachedTokens(resp map[string]any) (int, int) {
+	u, ok := resp["usage"].(map[string]any)
+	if !ok {
+		return 0, 0
+	}
+	prompt := 0
+	if v, ok := u["prompt_tokens"].(float64); ok {
+		prompt = int(v)
+	}
+	cached := 0
+	if details, ok := u["prompt_tokens_details"].(map[string]any); ok {
+		if v, ok := details["cached_tokens"].(float64); ok {
+			cached = int(v)
+		}
+	} else if v, ok := u["prompt_cache_hit_tokens"].(float64); ok {
+		cached = int(v)
+	}
+	return prompt, cached
 }

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkBuddy2API 网关智能中枢</title>
+  <style>
+    :root {
+      --bg: #090d16; --card: #131b2e; --border: #222f4c;
+      --text: #f1f5f9; --muted: #94a3b8; --primary: #38bdf8;
+      --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 18px; font-size: 14px; }
+    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 14px; flex-wrap: wrap; gap: 12px; }
+    .title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+    .tabs { display: flex; gap: 8px; }
+    .tab-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .tab-btn.active { background: var(--primary); color: #090d16; border-color: var(--primary); }
+    .auth-box { display: flex; align-items: center; gap: 8px; }
+    input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; outline: none; }
+    button { background: var(--primary); color: #090d16; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    button.btn-danger { background: var(--danger); color: #fff; }
+    button.btn-secondary { background: #334155; color: #fff; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 12px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-cn { background: #0284c7; color: #fff; }
+    .badge-global { background: #8b5cf6; color: #fff; }
+    .badge-healthy { background: rgba(52, 211, 153, 0.2); color: var(--success); }
+    .badge-cooling { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+    .badge-disabled { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+    .models-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; max-height: 240px; overflow-y: auto; }
+    .model-card { background: #090d16; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 100; }
+    .modal.show { display: flex; }
+    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 440px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .progress-bar-bg { background: #090d16; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; margin-top: 4px; }
+    .progress-bar-fill { background: var(--primary); height: 100%; }
+    .tag-cached { background: rgba(52, 211, 153, 0.15); color: var(--success); padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+    .cap-badge { background: #1e293b; color: var(--primary); padding: 1px 5px; border-radius: 3px; font-size: 10px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title">⚡ WorkBuddy2API 网关智能中枢</div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-pool')">账号与模型资源</button>
+        <button class="tab-btn" onclick="switchTab('tab-tokens')">Token 与输入缓存监控</button>
+        <button class="tab-btn" onclick="switchTab('tab-gateway')">网关接入配置</button>
+      </div>
+      <div class="auth-box">
+        <span style="color: var(--muted); font-size: 12px;">Key:</span>
+        <input type="password" id="apiKey" style="width: 140px;" placeholder="test_key">
+        <button onclick="saveKeyAndRefresh()">连接</button>
+      </div>
+    </header>
+
+    <!-- TAB 1: 账号池与核心指标 -->
+    <div id="tab-pool" class="tab-content active">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="grid">
+          <div class="card"><div style="color: var(--muted);">账号总数</div><div class="stat-val" id="totalAccounts">-</div></div>
+          <div class="card"><div style="color: var(--muted);">健康可用</div><div class="stat-val" style="color: var(--success);" id="healthyAccounts">-</div></div>
+          <div class="card"><div style="color: var(--muted);">冷却中</div><div class="stat-val" style="color: var(--warning);" id="coolingAccounts">-</div></div>
+          <div class="card"><div style="color: var(--muted);">已禁用</div><div class="stat-val" style="color: var(--danger);" id="disabledAccounts">-</div></div>
+          <div class="card"><div style="color: var(--muted);">累计总请求数</div><div class="stat-val" id="totalReqs">-</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>👥 账号池明细与管理</span>
+            <div style="display: flex; gap: 8px;">
+              <button onclick="startLogin('cn')">+ 添加国内版账号</button>
+              <button onclick="startLogin('global')" style="background: #8b5cf6; color: #fff;">+ 添加国际版账号</button>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>UID</th>
+                  <th>昵称</th>
+                  <th>域 (Realm)</th>
+                  <th>额度</th>
+                  <th>状态</th>
+                  <th>成功 / 失败</th>
+                  <th>冷却状态 / 原因</th>
+                  <th>管理操作</th>
+                </tr>
+              </thead>
+              <tbody id="accountsTable">
+                <tr><td colspan="8" style="text-align: center; color: var(--muted);">加载中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🤖 客户端可用模型与上下文能力 (<span id="modelCount">0</span>)</div>
+          <div class="models-list" id="modelsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Token 与上下文输入缓存深度监控 -->
+    <div id="tab-tokens" class="tab-content">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="grid">
+          <div class="card"><div style="color: var(--muted);">累计总 Token (输入+输出)</div><div class="stat-val" style="color: var(--primary);" id="totalTokenVal">-</div></div>
+          <div class="card"><div style="color: var(--muted);">🎯 上下文缓存命中率</div><div class="stat-val" style="color: var(--success);" id="globalHitRateVal">- %</div></div>
+          <div class="card"><div style="color: var(--muted);">💾 命中缓存 Token (省流)</div><div class="stat-val" style="color: var(--success);" id="totalCachedVal">-</div></div>
+          <div class="card"><div style="color: var(--muted);">📥 原始输入 / 📤 输出 Token</div><div class="stat-val" style="font-size: 20px;" id="inOutTokenVal">- / -</div></div>
+          <div class="card"><div style="color: var(--muted);">今日总消耗 Token</div><div class="stat-val" id="todayTokenVal">-</div></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="card">
+            <div class="card-title">📊 模型输入与缓存表现排行</div>
+            <div id="modelDistribution" style="display: flex; flex-direction: column; gap: 10px;">暂无调用产生</div>
+          </div>
+          <div class="card">
+            <div class="card-title">⏱️ 延迟与传输速率</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div><b>P50 / P90 首字延迟 (TTFB):</b> <span id="p50p90TTFB">- / -</span> ms</div>
+              <div><b>P50 / P90 请求总耗时:</b> <span id="p50p90Total">- / -</span> ms</div>
+              <div><b>平均生成速率:</b> <span id="avgTPSVal" style="color: var(--success); font-weight: 700;">-</span> T/s</div>
+              <div><b>近期调用成功率:</b> <span id="successRateVal">-</span> %</div>
+              <div><b>网关运行时间:</b> <span id="uptimeVal">-</span> (占用内存: <span id="memAllocVal">-</span> MB)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>📊 最近 100 次调用性能与缓存明细流水</span>
+            <span style="font-size: 12px; color: var(--muted);">实时自动更新</span>
+          </div>
+          <div style="overflow-x: auto; max-height: 440px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>模型</th>
+                  <th>模式</th>
+                  <th>账号</th>
+                  <th>输入 Token</th>
+                  <th>上下文缓存命中</th>
+                  <th>输出 Token</th>
+                  <th>首字 (TTFB)</th>
+                  <th>总耗时</th>
+                  <th>速率</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="metricsTable">
+                <tr><td colspan="11" style="text-align: center; color: var(--muted);">暂无调用流水</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 网关配置与客户端接入 -->
+    <div id="tab-gateway" class="tab-content">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <div class="card-title">⚙️ 网关运行时配置</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;" id="gatewayConfig">加载中...</div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔌 客户端标准接入参考</div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="color: var(--muted); font-size: 12px; margin-bottom: 4px;">OpenAI Base URL:</div>
+              <input type="text" id="cfgBaseURL" readonly style="width: 100%;">
+            </div>
+            <div>
+              <div style="color: var(--muted); font-size: 12px; margin-bottom: 4px;">API Key:</div>
+              <input type="text" id="cfgAPIKey" readonly style="width: 100%;">
+            </div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.5;">
+              接入 NextChat、Chatbox、Cherry Studio、Cursor、Cline、Open WebUI 时，直接填入上方地址和密钥即可。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OAuth 登录弹窗 -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <div style="font-weight: 700; font-size: 16px;" id="loginTitle">OAuth 授权登录</div>
+      <div style="font-size: 13px; color: var(--muted);">请点击下方按钮打开授权页面，或复制链接至浏览器完成登录。</div>
+      <div style="background: #090d16; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 12px;" id="loginUrlText">正在获取授权地址...</div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="openAuthUrl()" id="openUrlBtn" style="flex: 1;" disabled>在浏览器打开</button>
+        <button onclick="copyAuthUrl()" class="btn-secondary">复制链接</button>
+      </div>
+      <div style="font-size: 13px; color: var(--warning);" id="pollStatus">等待用户授权中...</div>
+      <div style="display: flex; justify-content: flex-end;">
+        <button onclick="closeModal()" class="btn-secondary">取消关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const keyInput = document.getElementById('apiKey');
+    keyInput.value = localStorage.getItem('wb2a_key') || 'test_key';
+    let currentAuthUrl = '', currentAuthState = '', currentAuthRealm = '', pollTimer = null;
+
+    function getHeaders() {
+      const k = keyInput.value.trim();
+      return k ? { 'Authorization': `Bearer ${k}` } : {};
+    }
+    function saveKeyAndRefresh() {
+      localStorage.setItem('wb2a_key', keyInput.value.trim());
+      loadStatus(); loadMetrics(); loadGateway();
+    }
+    function switchTab(id) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(2) + ' M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + ' K';
+      return num;
+    }
+
+    function formatSeconds(sec) {
+      const d = Math.floor(sec / 86400);
+      const h = Math.floor((sec % 86400) / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm';
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch('/status', { headers: getHeaders() });
+        const data = await res.json();
+        document.getElementById('totalAccounts').innerText = data.total ?? 0;
+        document.getElementById('healthyAccounts').innerText = data.healthy ?? 0;
+        document.getElementById('coolingAccounts').innerText = data.cooling ?? 0;
+        document.getElementById('disabledAccounts').innerText = data.disabled ?? 0;
+
+        const tbody = document.getElementById('accountsTable');
+        if (!data.accounts || data.accounts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--muted);">暂无账号，请点击右上角按钮添加</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.accounts.map(a => {
+          let badge = a.disabled ? '<span class="badge badge-disabled">已禁用</span>' :
+                      a.cooling ? '<span class="badge badge-cooling">冷却中</span>' :
+                      '<span class="badge badge-healthy">健康</span>';
+          let realm = a.realm === 'global' ? '<span class="badge badge-global">Global</span>' : '<span class="badge badge-cn">CN</span>';
+          let cool = a.cooling ? `${a.cool_remaining}s (${a.cool_kind || a.reason || '限流'})` : '-';
+          return `
+            <tr>
+              <td><code>${a.uid}</code></td>
+              <td>${a.nickname || '-'}</td>
+              <td>${realm}</td>
+              <td style="font-weight: 600;">${a.credits ?? '-'}</td>
+              <td>${badge}</td>
+              <td><span style="color: var(--success);">${a.success_count||0}</span> / <span style="color: var(--danger);">${a.err_total||0}</span></td>
+              <td style="font-size: 12px; color: var(--muted);">${cool}</td>
+              <td>
+                <button style="padding: 2px 8px; font-size: 11px;" onclick="reviveAccount('${a.uid}')">复活</button>
+                <button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="deleteAccount('${a.uid}')">删除</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+
+    async function loadMetrics() {
+      try {
+        const res = await fetch('/api/metrics', { headers: getHeaders() });
+        const data = await res.json();
+        const t = data.tokens || {};
+        const l = data.latency || {};
+        const s = data.system || {};
+
+        document.getElementById('totalTokenVal').innerText = formatNumber(t.total || 0);
+        document.getElementById('totalCachedVal').innerText = formatNumber(t.cached_tokens || 0);
+        document.getElementById('globalHitRateVal').innerText = (t.cache_hit_rate || 0).toFixed(1) + ' %';
+        document.getElementById('inOutTokenVal').innerText = `${formatNumber(t.prompt_tokens || 0)} / ${formatNumber(t.completion_tokens || 0)}`;
+        document.getElementById('todayTokenVal').innerText = formatNumber(t.today || 0);
+        document.getElementById('totalReqs').innerText = t.total_reqs || 0;
+
+        let sRate = t.total_reqs > 0 ? ((t.success_reqs / t.total_reqs) * 100).toFixed(0) : '-';
+        document.getElementById('successRateVal').innerText = sRate + ' %';
+        document.getElementById('p50p90TTFB').innerText = `${l.p50_ttfb || 0} / ${l.p90_ttfb || 0}`;
+        document.getElementById('p50p90Total').innerText = `${l.p50_total || 0} / ${l.p90_total || 0}`;
+        document.getElementById('memAllocVal').innerText = s.memory_alloc_mb || '-';
+        document.getElementById('uptimeVal').innerText = formatSeconds(s.uptime_seconds || 0);
+
+        const mUsage = t.model_usage || {};
+        const mKeys = Object.keys(mUsage);
+        if (mKeys.length === 0) {
+          document.getElementById('modelDistribution').innerHTML = '<div style="color: var(--muted);">暂无调用产生</div>';
+        } else {
+          let maxTok = 0;
+          mKeys.forEach(k => {
+            const tot = mUsage[k].prompt_tokens + mUsage[k].complete_tokens;
+            if (tot > maxTok) maxTok = tot;
+          });
+          document.getElementById('modelDistribution').innerHTML = mKeys.map(k => {
+            const u = mUsage[k];
+            const tot = u.prompt_tokens + u.complete_tokens;
+            const pct = maxTok > 0 ? (tot / maxTok * 100).toFixed(0) : 0;
+            const hitPct = u.prompt_tokens > 0 ? (u.cached_tokens / u.prompt_tokens * 100).toFixed(1) : '0.0';
+            return `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                  <span><code>${k}</code> (${u.calls}次)</span>
+                  <span>总 ${formatNumber(tot)} | 命中缓存: <b style="color: var(--success);">${formatNumber(u.cached_tokens)} (${hitPct}%)</b></span>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%"></div></div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        const records = data.records || [];
+        if (records.length > 0) {
+          let totalTPS = 0, countTPS = 0;
+          records.forEach(r => { if (r.speed_tps > 0) { totalTPS += r.speed_tps; countTPS++; } });
+          document.getElementById('avgTPSVal').innerText = countTPS > 0 ? (totalTPS / countTPS).toFixed(1) : '-';
+
+          document.getElementById('metricsTable').innerHTML = records.map(r => {
+            let cacheBadge = r.cached_tokens > 0 ? `<span class="tag-cached">${r.cached_tokens} (${r.cache_hit_rate.toFixed(0)}%)</span>` : '<span style="color: var(--muted);">-</span>';
+            return `
+              <tr>
+                <td>${r.time}</td>
+                <td><code>${r.model}</code></td>
+                <td>${r.mode}</td>
+                <td><code>${(r.uid||'').slice(0,8)}</code></td>
+                <td>${r.prompt_tokens > 0 ? r.prompt_tokens : '-'}</td>
+                <td>${cacheBadge}</td>
+                <td>${r.complete_tokens > 0 ? r.complete_tokens : '-'}</td>
+                <td>${r.ttfb_ms} ms</td>
+                <td>${r.total_ms} ms</td>
+                <td>${r.speed_tps > 0 ? r.speed_tps.toFixed(1) + ' T/s' : '-'}</td>
+                <td><span style="color: ${r.status===200 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${r.status}</span></td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function loadGateway() {
+      try {
+        const res = await fetch('/api/gateway', { headers: getHeaders() });
+        const cfg = await res.json();
+        document.getElementById('cfgBaseURL').value = `${window.location.origin}/v1`;
+        document.getElementById('cfgAPIKey').value = cfg.api_key || 'test_key';
+        document.getElementById('gatewayConfig').innerHTML = `
+          <div><b>API Key:</b> <code>${cfg.api_key || '（未设置）'}</code></div>
+          <div><b>提示词重写模式:</b> <code>${cfg.prompt_mode}</code></div>
+          <div><b>单请求体上限:</b> ${cfg.max_body_mb} MB</div>
+          <div><b>软限流冷却基数:</b> ${cfg.soft_rate}</div>
+          <div><b>会话粘性路由:</b> ${cfg.session_mode ? '已开启' : '未开启'}</div>
+        `;
+      } catch (e) {}
+    }
+
+    async function loadModels() {
+      try {
+        const res = await fetch('/v1/models', { headers: getHeaders() });
+        const data = await res.json();
+        const list = data.data || [];
+        document.getElementById('modelCount').innerText = list.length;
+        document.getElementById('modelsList').innerHTML = list.map(m => {
+          let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M' : Math.round(m.context_length/1024)+'k') : '128k';
+          let caps = [];
+          if (m.supports_vision) caps.push('👁️视觉');
+          if (m.supports_reasoning) caps.push('🧠思考');
+          if (m.supports_tools) caps.push('🛠️工具');
+          let creditsBadge = m.credits ? `<span style="font-size:11px; color: var(--warning);">${m.credits}</span>` : '';
+          return `
+            <div class="model-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <b style="color: var(--text);">${m.id}</b>
+                <span class="badge badge-cn">${ctx} 上下文</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:4px;">${caps.map(c => `<span class="cap-badge">${c}</span>`).join('')}</div>
+                ${creditsBadge}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+
+    async function startLogin(realm) {
+      currentAuthRealm = realm;
+      document.getElementById('loginTitle').innerText = realm === 'global' ? '添加国际版账号' : '添加国内版账号';
+      document.getElementById('loginUrlText').innerText = '正在生成安全授权链接...';
+      document.getElementById('pollStatus').innerText = '正在建立会话...';
+      document.getElementById('openUrlBtn').disabled = true;
+      document.getElementById('loginModal').classList.add('show');
+
+      const res = await fetch(`/api/auth/start?realm=${realm}`, { method: 'POST', headers: getHeaders() });
+      const data = await res.json();
+      if (data.auth_url) {
+        currentAuthUrl = data.auth_url;
+        currentAuthState = data.state;
+        document.getElementById('loginUrlText').innerText = currentAuthUrl;
+        document.getElementById('openUrlBtn').disabled = false;
+        document.getElementById('pollStatus').innerText = '等待浏览器完成授权...（自动监听中）';
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(pollAuth, 2500);
+      }
+    }
+
+    async function pollAuth() {
+      if (!currentAuthState) return;
+      try {
+        const res = await fetch('/api/auth/poll', {
+          method: 'POST',
+          headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: currentAuthState, realm: currentAuthRealm })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          clearInterval(pollTimer);
+          document.getElementById('pollStatus').innerHTML = `<span style="color: var(--success);">授权成功！UID: ${data.uid}（已加入账号池）</span>`;
+          setTimeout(() => { closeModal(); loadStatus(); }, 1200);
+        }
+      } catch (e) {}
+    }
+
+    function openAuthUrl() { if (currentAuthUrl) window.open(currentAuthUrl, '_blank'); }
+    function copyAuthUrl() {
+      navigator.clipboard.writeText(currentAuthUrl);
+      alert('授权链接已复制到剪贴板！');
+    }
+    function closeModal() {
+      if (pollTimer) clearInterval(pollTimer);
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    async function deleteAccount(uid) {
+      if (!confirm(`确定要移除账号 ${uid} 吗？`)) return;
+      await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid })
+      });
+      loadStatus();
+    }
+
+    async function reviveAccount(uid) {
+      await fetch('/api/account/revive', {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid })
+      });
+      loadStatus();
+    }
+
+    saveKeyAndRefresh();
+    loadModels();
+    setInterval(() => { loadStatus(); loadMetrics(); }, 3000);
+  </script>
+</body>
+</html>

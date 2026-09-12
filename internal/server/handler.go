@@ -83,10 +83,18 @@ func NewHandler(cfg Config) *Handler {
 	h.mux.HandleFunc("GET /v1/models", h.withAuth(h.models))
 	h.mux.HandleFunc("GET /status", h.withAuth(h.status))
 	h.mux.HandleFunc("GET /healthz", h.healthz)
+	h.registerWebUIRoutes()
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	h.mux.ServeHTTP(w, r)
 }
 
@@ -179,6 +187,7 @@ func (h *Handler) models(w http.ResponseWriter, r *http.Request) {
 
 // modelList 动态获取模型列表并包装成 OpenAI 格式（含 context_length）。
 func (h *Handler) modelList() []map[string]any {
+	var list []map[string]any
 	if infos := h.fetchDynamicModels(); len(infos) > 0 {
 		out := make([]map[string]any, 0, len(infos))
 		for _, mi := range infos {
@@ -191,13 +200,15 @@ func (h *Handler) modelList() []map[string]any {
 				"max_output_tokens": mi.MaxTokens,
 			}
 			if mi.ContextWindow == 0 {
-				entry["context_length"] = 131072 // 兜底
+				entry["context_length"] = 131072
 			}
 			out = append(out, entry)
 		}
-		return out
+		list = out
+	} else {
+		list = staticModels
 	}
-	return staticModels
+	return enrichModelList(list)
 }
 
 // fetchDynamicModels 从池中任一健康账号拉模型列表（含 contextWindow/maxTokens），缓存 1h。
@@ -414,6 +425,7 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			_ = upstream.Stream(w, stats)
 			st.ttfb = stats.TTFB()
 			st.toks, _ = stats.Tokens()
+			st.promptTokens, st.cachedTokens = stats.PromptAndCache()
 			rc.Close()
 			return
 		}
@@ -428,6 +440,7 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, resp)
 		st.status = http.StatusOK
 		st.toks = completionTokens(resp)
+		st.promptTokens, st.cachedTokens = promptAndCachedTokens(resp)
 		return
 	}
 	msg := "all accounts unavailable (cooling/disabled)"
