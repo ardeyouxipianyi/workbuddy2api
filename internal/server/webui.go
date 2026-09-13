@@ -54,6 +54,7 @@ type RequestMetric struct {
 	Model        string  `json:"model"`
 	Mode         string  `json:"mode"`
 	UID          string  `json:"uid"`
+	Effort       string  `json:"effort,omitempty"`
 	TTFBMs       int64   `json:"ttfb_ms"`
 	TotalMs      int64   `json:"total_ms"`
 	PromptToks   int     `json:"prompt_tokens"`
@@ -64,7 +65,7 @@ type RequestMetric struct {
 	Status       int     `json:"status"`
 }
 
-func RecordRequestMetric(model, mode, uid string, ttfb, total time.Duration, status, promptToks, completeToks, cachedToks int) {
+func RecordRequestMetric(model, mode, uid, effort string, ttfb, total time.Duration, status, promptToks, completeToks, cachedToks int) {
 	totalRequests.Add(1)
 	if status == 200 {
 		totalSuccesses.Add(1)
@@ -131,6 +132,7 @@ func RecordRequestMetric(model, mode, uid string, ttfb, total time.Duration, sta
 		Model:        model,
 		Mode:         mode,
 		UID:          uid,
+		Effort:       effort,
 		TTFBMs:       ttfbMs,
 		TotalMs:      total.Milliseconds(),
 		PromptToks:   promptToks,

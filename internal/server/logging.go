@@ -40,7 +40,7 @@ func newChatStat(now time.Time, body []byte, stream bool) *chatStat {
 	if stream {
 		mode = "stream"
 	}
-	return &chatStat{start: now, model: parseModelFromBody(body), mode: mode, toks: -1}
+	return &chatStat{start: now, model: parseModelFromBody(body), mode: mode, effort: parseEffortFromBody(body), toks: -1}
 }
 
 // done 幂等落一行表格日志。
@@ -50,7 +50,7 @@ func (s *chatStat) done() {
 	}
 	s.logged = true
 	logChatRow(s.ttfb, time.Since(s.start), s.model, s.mode, s.uid, s.status, s.toks)
-	RecordRequestMetric(s.model, s.mode, s.uid, s.ttfb, time.Since(s.start), s.status, s.promptTokens, s.toks, s.cachedTokens)
+	RecordRequestMetric(s.model, s.mode, s.uid, s.effort, s.ttfb, time.Since(s.start), s.status, s.promptTokens, s.toks, s.cachedTokens)
 }
 
 // chatStatsReader 在流式透传时抓取 SSE 末帧的 usage.completion_tokens 精确值，
@@ -228,4 +228,22 @@ func promptAndCachedTokens(resp map[string]any) (int, int) {
 		cached = int(v)
 	}
 	return prompt, cached
+}
+
+func parseEffortFromBody(body []byte) string {
+	var obj struct {
+		ReasoningEffort string `json:"reasoning_effort"`
+		Thinking        *struct {
+			Effort string `json:"effort"`
+		} `json:"thinking"`
+	}
+	if json.Unmarshal(body, &obj) == nil {
+		if obj.ReasoningEffort != "" {
+			return obj.ReasoningEffort
+		}
+		if obj.Thinking != nil && obj.Thinking.Effort != "" {
+			return obj.Thinking.Effort
+		}
+	}
+	return ""
 }

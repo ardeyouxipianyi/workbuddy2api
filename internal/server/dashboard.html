@@ -151,6 +151,7 @@
                 <tr>
                   <th>时间</th>
                   <th>模型</th>
+                  <th>推理强度</th>
                   <th>模式</th>
                   <th>账号</th>
                   <th>输入 Token</th>
@@ -163,7 +164,7 @@
                 </tr>
               </thead>
               <tbody id="metricsTable">
-                <tr><td colspan="11" style="text-align: center; color: var(--muted);">暂无调用流水</td></tr>
+                <tr><td colspan="12" style="text-align: center; color: var(--muted);">暂无调用流水</td></tr>
               </tbody>
             </table>
           </div>
@@ -348,6 +349,7 @@
               <tr>
                 <td>${r.time}</td>
                 <td><code>${r.model}</code></td>
+                <td>${r.effort ? `<span class="badge" style="background:#4338ca;color:#fff;">${r.effort}</span>` : '<span style="color:var(--muted);">-</span>'}</td>
                 <td>${r.mode}</td>
                 <td><code>${(r.uid||'').slice(0,8)}</code></td>
                 <td>${r.prompt_tokens > 0 ? r.prompt_tokens : '-'}</td>
@@ -390,7 +392,7 @@
           let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M' : Math.round(m.context_length/1024)+'k') : '128k';
           let caps = [];
           if (m.supports_vision) caps.push('👁️视觉');
-          if (m.supports_reasoning) caps.push('🧠思考');
+          if (m.supports_reasoning) caps.push('🧠思考' + (m.reasoning_efforts ? ': ' + m.reasoning_efforts.join('/') : ''));
           if (m.supports_tools) caps.push('🛠️工具');
           let creditsBadge = m.credits ? `<span style="font-size:11px; color: var(--warning);">${m.credits}</span>` : '';
           return `
