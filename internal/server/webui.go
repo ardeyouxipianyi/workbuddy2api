@@ -158,7 +158,14 @@ func (h *Handler) registerWebUIRoutes() {
 	h.mux.HandleFunc("POST /api/auth/start", h.withAuth(h.apiAuthStart))
 	h.mux.HandleFunc("POST /api/auth/poll", h.withAuth(h.apiAuthPoll))
 	h.mux.HandleFunc("POST /api/account/delete", h.withAuth(h.apiAccountDelete))
+	h.mux.HandleFunc("POST /api/account/toggle", h.withAuth(h.apiAccountToggle))
+	h.mux.HandleFunc("GET /api/settings", h.withAuth(h.apiSettingsGet))
+	h.mux.HandleFunc("POST /api/settings", h.withAuth(h.apiSettingsSave))
 	h.mux.HandleFunc("POST /api/account/revive", h.withAuth(h.apiAccountRevive))
+	h.mux.HandleFunc("POST /api/schedule/checkin", h.withAuth(h.apiScheduleCheckin))
+	h.mux.HandleFunc("POST /api/schedule/travel", h.withAuth(h.apiScheduleTravel))
+	h.mux.HandleFunc("POST /api/schedule/activity", h.withAuth(h.apiScheduleActivity))
+	h.mux.HandleFunc("POST /api/schedule/keepalive", h.withAuth(h.apiScheduleKeepalive))
 }
 
 func (h *Handler) apiMetrics(w http.ResponseWriter, r *http.Request) {
@@ -280,81 +287,166 @@ func (h *Handler) apiAuthStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) apiAuthPoll(w http.ResponseWriter, r *http.Request) {
-	var body struct { State string `json:"state"`; Realm string `json:"realm"` }
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json"})
+	var body struct {
+		State string `json:"state"`
+		Realm string `json:"realm"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.State == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "state 参数不能为空"})
 		return
 	}
+
 	base := "https://copilot.tencent.com"
 	origin := "https://www.codebuddy.cn"
 	if body.Realm == "global" {
 		base = "https://www.workbuddy.ai"
 		origin = "https://www.workbuddy.ai"
 	}
+
 	req, _ := http.NewRequest("GET", base+"/v2/plugin/auth/token?state="+body.State, nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	req.Header.Set("Origin", origin)
+	req.Header.Set("Referer", origin+"/")
 	req.Header.Set("User-Agent", "CLI/2.63.2 CodeBuddy/2.63.2")
-	resp, err := http.DefaultClient.Do(req)
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		writeJSON(w, http.StatusOK, map[string]any{"status": "pending", "msg": "网络等待: " + err.Error()})
 		return
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+
 	var tokEnv struct {
-		Code int `json:"code"`
-		Msg  string `json:"msg"`
-		Data struct {
-			AccessToken  string `json:"access_token"`
-			RefreshToken string `json:"refresh_token"`
-			ExpiresIn    int64  `json:"expires_in"`
-			Domain       string `json:"domain"`
-		} `json:"data"`
+		Code int             `json:"code"`
+		Msg  string          `json:"msg"`
+		Data json.RawMessage `json:"data"`
 	}
-	if json.Unmarshal(raw, &tokEnv) != nil || tokEnv.Code != 0 {
-		writeJSON(w, http.StatusAccepted, map[string]any{"status": "pending", "msg": tokEnv.Msg})
+	if err := json.Unmarshal(raw, &tokEnv); err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "pending", "msg": "等待中..."})
 		return
 	}
+
+	if tokEnv.Code != 0 || len(tokEnv.Data) == 0 {
+		msg := tokEnv.Msg
+		if msg == "" {
+			msg = "等待用户在浏览器完成授权..."
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"status": "pending", "msg": msg, "code": tokEnv.Code})
+		return
+	}
+
+	var tok struct {
+		AccessToken       string `json:"accessToken"`
+		RefreshToken      string `json:"refreshToken"`
+		ExpiresIn         int64  `json:"expiresIn"`
+		Domain            string `json:"domain"`
+		AccessTokenSnake  string `json:"access_token"`
+		RefreshTokenSnake string `json:"refresh_token"`
+		ExpiresInSnake    int64  `json:"expires_in"`
+	}
+	if err := json.Unmarshal(tokEnv.Data, &tok); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "解析 token 失败: " + err.Error()})
+		return
+	}
+	if tok.AccessToken == "" {
+		tok.AccessToken = tok.AccessTokenSnake
+	}
+	if tok.RefreshToken == "" {
+		tok.RefreshToken = tok.RefreshTokenSnake
+	}
+	if tok.ExpiresIn <= 0 {
+		tok.ExpiresIn = tok.ExpiresInSnake
+	}
+	if tok.AccessToken == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "上游未返回有效 accessToken"})
+		return
+	}
+
 	accReq, _ := http.NewRequest("GET", base+"/v2/plugin/login/account?state="+body.State, nil)
+	accReq.Header.Set("Content-Type", "application/json")
+	accReq.Header.Set("Accept", "application/json, text/plain, */*")
+	accReq.Header.Set("X-Requested-With", "XMLHttpRequest")
 	accReq.Header.Set("Origin", origin)
-	accReq.Header.Set("Authorization", "Bearer "+tokEnv.Data.AccessToken)
+	accReq.Header.Set("Referer", origin+"/")
+	accReq.Header.Set("Authorization", "Bearer "+tok.AccessToken)
 	accReq.Header.Set("User-Agent", "CLI/2.63.2 CodeBuddy/2.63.2")
-	accResp, err := http.DefaultClient.Do(accReq)
+
+	accResp, err := client.Do(accReq)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "获取账号信息失败: " + err.Error()})
 		return
 	}
 	defer accResp.Body.Close()
 	accRaw, _ := io.ReadAll(accResp.Body)
+
 	var accEnv struct {
 		Code int `json:"code"`
 		Msg  string `json:"msg"`
 		Data struct {
-			UID          string `json:"uid"`
-			EnterpriseID string `json:"enterprise_id"`
-			Nickname     string `json:"nickname"`
+			UID             string `json:"uid"`
+			EnterpriseID    string `json:"enterpriseId"`
+			EnterpriseIDAlt string `json:"enterprise_id"`
+			Nickname        string `json:"nickname"`
 		} `json:"data"`
 	}
-	if json.Unmarshal(accRaw, &accEnv) != nil || accEnv.Code != 0 || accEnv.Data.UID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "get uid failed: " + accEnv.Msg})
+	if err := json.Unmarshal(accRaw, &accEnv); err != nil || accEnv.Code != 0 || accEnv.Data.UID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "获取 uid 失败: " + accEnv.Msg})
 		return
 	}
-	authDir := "./auths"
-	doc := map[string]any{
-		"account": map[string]any{ "uid": accEnv.Data.UID, "enterpriseId": accEnv.Data.EnterpriseID, "nickname": accEnv.Data.Nickname },
-		"auth": map[string]any{ "accessToken": tokEnv.Data.AccessToken, "refreshToken": tokEnv.Data.RefreshToken, "expiresAt": time.Now().Unix() + tokEnv.Data.ExpiresIn, "domain": tokEnv.Data.Domain },
+
+	uid := accEnv.Data.UID
+	entID := accEnv.Data.EnterpriseID
+	if entID == "" {
+		entID = accEnv.Data.EnterpriseIDAlt
 	}
-	targetFile := filepath.Join(authDir, fmt.Sprintf("workbuddy-%s.json", accEnv.Data.UID))
+	nickname := accEnv.Data.Nickname
+	if nickname == "" {
+		nickname = "用户-" + uid[:6]
+	}
+
+	authDir := "./auths"
+	_ = os.MkdirAll(authDir, 0755)
+
+	expiresAt := time.Now().Unix() + tok.ExpiresIn
+	if tok.ExpiresIn <= 0 {
+		expiresAt = time.Now().Unix() + 2592000
+	}
+
+	doc := map[string]any{
+		"account": map[string]any{
+			"uid":          uid,
+			"enterpriseId": entID,
+			"nickname":     nickname,
+		},
+		"auth": map[string]any{
+			"accessToken":  tok.AccessToken,
+			"refreshToken": tok.RefreshToken,
+			"expiresAt":    expiresAt,
+			"domain":       tok.Domain,
+		},
+	}
+	targetFile := filepath.Join(authDir, fmt.Sprintf("workbuddy-%s.json", uid))
 	content, _ := json.MarshalIndent(doc, "", "  ")
 	if err := os.WriteFile(targetFile, content, 0644); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "save file failed: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "保存凭据失败: " + err.Error()})
 		return
 	}
-	auths, err := auth.LoadDir(authDir)
-	if err == nil { h.cfg.Pool.SyncToDir(auths) }
-	writeJSON(w, http.StatusOK, map[string]any{"status": "success", "uid": accEnv.Data.UID, "nickname": accEnv.Data.Nickname})
-}
 
+	auths, err := auth.LoadDir(authDir)
+	if err == nil {
+		h.cfg.Pool.SyncToDir(auths)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":   "success",
+		"uid":      uid,
+		"nickname": nickname,
+	})
+}
 func (h *Handler) apiAccountDelete(w http.ResponseWriter, r *http.Request) {
 	var body struct { UID string `json:"uid"` }
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.UID == "" {
@@ -375,4 +467,123 @@ func (h *Handler) apiAccountRevive(w http.ResponseWriter, r *http.Request) {
 	}
 	h.cfg.Pool.ReviveDisabled(body.UID)
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (h *Handler) apiScheduleCheckin(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.RunCheckin != nil {
+		go h.cfg.RunCheckin()
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "msg": "已触发签到与余额查询解冻（后台执行中）"})
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "disabled", "msg": "未启用签到任务"})
+	}
+}
+
+func (h *Handler) apiScheduleTravel(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.RunTravel != nil {
+		go h.cfg.RunTravel()
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "msg": "已触发猫猫旅行巡检（领养/派出/领奖后台执行中）"})
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "disabled", "msg": "未启用猫猫旅行任务"})
+	}
+}
+
+func (h *Handler) apiScheduleActivity(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.RunActivity != nil {
+		go h.cfg.RunActivity()
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "msg": "已触发每日活跃上报打卡（连登点亮中）"})
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "disabled", "msg": "未启用活跃上报任务"})
+	}
+}
+
+func (h *Handler) apiScheduleKeepalive(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.RunKeepalive != nil {
+		go h.cfg.RunKeepalive()
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "msg": "已触发全池 Token 保活刷新"})
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "disabled", "msg": "未启用 Token 保活任务"})
+	}
+}
+
+func (h *Handler) apiAccountToggle(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		UID     string `json:"uid"`
+		Disable bool   `json:"disable"` // true: 开启养号 (暂停聊天挑号), false: 恢复接单
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.UID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "uid 不能为空"})
+		return
+	}
+	if body.Disable {
+		h.cfg.Pool.Pause(body.UID)
+	} else {
+		h.cfg.Pool.Resume(body.UID)
+		h.cfg.Pool.ReviveDisabled(body.UID)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "paused": body.Disable})
+}
+
+func (h *Handler) apiSettingsGet(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"api_key":       h.cfg.APIKey,
+		"realm_pref":    h.cfg.Pool.RealmPreference(),
+		"max_in_flight": h.cfg.Pool.MaxInFlight(),
+		"prompt_mode":   h.cfg.PromptMode,
+		"session_mode":  h.cfg.Session != nil,
+	})
+}
+
+func (h *Handler) apiSettingsSave(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		APIKey      *string `json:"api_key"`
+		RealmPref   *string `json:"realm_pref"`
+		MaxInFlight *int    `json:"max_in_flight"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "无效的参数格式"})
+		return
+	}
+	if body.APIKey != nil && *body.APIKey != "" {
+		h.cfg.APIKey = *body.APIKey
+	}
+	if body.RealmPref != nil && *body.RealmPref != "" {
+		h.cfg.Pool.SetRealmPreference(*body.RealmPref)
+	}
+	if body.MaxInFlight != nil && *body.MaxInFlight > 0 {
+		h.cfg.Pool.SetMaxInFlight(*body.MaxInFlight)
+	}
+
+	saveConfigJSON(body.APIKey, body.MaxInFlight)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":    true,
+		"msg":        "网关配置与调度模式已成功更新并实时生效！",
+		"api_key":    h.cfg.APIKey,
+		"realm_pref": h.cfg.Pool.RealmPreference(),
+	})
+}
+
+func saveConfigJSON(apiKey *string, maxInFlight *int) {
+	cfgPaths := []string{"config.json", "/app/config.json"}
+	for _, fp := range cfgPaths {
+		raw, err := os.ReadFile(fp)
+		if err != nil {
+			continue
+		}
+		var m map[string]any
+		if json.Unmarshal(raw, &m) != nil {
+			continue
+		}
+		if apiKey != nil && *apiKey != "" {
+			m["api_key"] = *apiKey
+		}
+		if maxInFlight != nil && *maxInFlight > 0 {
+			if poolObj, ok := m["pool"].(map[string]any); ok {
+				poolObj["max_in_flight"] = *maxInFlight
+			}
+		}
+		out, err := json.MarshalIndent(m, "", "  ")
+		if err == nil {
+			_ = os.WriteFile(fp, out, 0644)
+		}
+	}
 }

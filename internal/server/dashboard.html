@@ -3,195 +3,1152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorkBuddy2API 网关智能中枢</title>
+  <title>WorkBuddy2API 网关中枢控制台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090d16; --card: #131b2e; --border: #222f4c;
-      --text: #f1f5f9; --muted: #94a3b8; --primary: #38bdf8;
-      --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+      --bg-base: #080b12;
+      --bg-surface: #0e1424;
+      --bg-card: rgba(18, 26, 44, 0.75);
+      --bg-card-hover: rgba(26, 38, 64, 0.85);
+      --bg-input: #0a0f1d;
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-focus: rgba(56, 189, 248, 0.5);
+      --border-card: rgba(255, 255, 255, 0.09);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --primary-glow: rgba(56, 189, 248, 0.25);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.25);
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.45);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 18px; font-size: 14px; }
-    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 14px; flex-wrap: wrap; gap: 12px; }
-    .title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-    .tabs { display: flex; gap: 8px; }
-    .tab-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .tab-btn.active { background: var(--primary); color: #090d16; border-color: var(--primary); }
-    .auth-box { display: flex; align-items: center; gap: 8px; }
-    input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; outline: none; }
-    button { background: var(--primary); color: #090d16; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    button.btn-danger { background: var(--danger); color: #fff; }
-    button.btn-secondary { background: #334155; color: #fff; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-    .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; }
-    table { width: 100%; border-collapse: collapse; text-align: left; }
-    th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-size: 12px; }
-    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-    .badge-cn { background: #0284c7; color: #fff; }
-    .badge-global { background: #8b5cf6; color: #fff; }
-    .badge-healthy { background: rgba(52, 211, 153, 0.2); color: var(--success); }
-    .badge-cooling { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
-    .badge-disabled { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
-    .models-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; max-height: 240px; overflow-y: auto; }
-    .model-card { background: #090d16; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 100; }
-    .modal.show { display: flex; }
-    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 440px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-    .progress-bar-bg { background: #090d16; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; margin-top: 4px; }
-    .progress-bar-fill { background: var(--primary); height: 100%; }
-    .tag-cached { background: rgba(52, 211, 153, 0.15); color: var(--success); padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; }
-    .cap-badge { background: #1e293b; color: var(--primary); padding: 1px 5px; border-radius: 3px; font-size: 10px; border: 1px solid var(--border); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 85% 90%, rgba(168, 85, 247, 0.05), transparent);
+    }
+    .layout-container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-version {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 1px 6px;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+    }
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .key-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 2px 4px 2px 10px;
+      transition: border-color 0.2s;
+    }
+    .key-input-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+    .key-input-wrapper svg {
+      width: 15px;
+      height: 15px;
+      fill: var(--text-dim);
+      margin-right: 6px;
+    }
+    .key-input-wrapper input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      width: 150px;
+      outline: none;
+    }
+    /* Segmented Navigation */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 5px;
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+    }
+    .nav-tab-item {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nav-tab-item svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    .nav-tab-item:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .nav-tab-item.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(168, 85, 247, 0.16));
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+    /* Cards & Grids */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--primary);
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .stat-card {
+      background: rgba(14, 20, 36, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--card-accent, var(--primary)), transparent);
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stat-val {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      letter-spacing: -0.5px;
+    }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--primary);
+      color: #080b12;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      outline: none;
+    }
+    .btn:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 14px var(--primary-glow);
+    }
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #a855f7);
+      color: #fff;
+    }
+    .btn-purple:hover {
+      box-shadow: 0 0 14px var(--purple-glow);
+      filter: brightness(1.1);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+      box-shadow: 0 0 12px var(--danger-glow);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: rgba(10, 15, 29, 0.5);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead {
+      background: rgba(14, 20, 36, 0.9);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    th {
+      padding: 12px 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .badge-realm-cn {
+      background: rgba(14, 165, 233, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.3);
+    }
+    .badge-realm-global {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-status-healthy {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .badge-status-cooling {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .badge-status-disabled {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .badge-effort-pill {
+      background: rgba(168, 85, 247, 0.18);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      font-weight: 600;
+    }
+    .badge-context-pill {
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .badge-cached-pill {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    /* Model Cards Grid */
+    .model-search-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .model-search-input {
+      flex: 1;
+      min-width: 240px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      color: #fff;
+      font-size: 13px;
+    }
+    .model-search-input:focus {
+      border-color: var(--primary);
+    }
+    .model-filter-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-tag {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .filter-tag:hover, .filter-tag.active {
+      color: #fff;
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.12);
+    }
+    .models-grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 12px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .models-grid-layout::-webkit-scrollbar {
+      width: 6px;
+    }
+    .models-grid-layout::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    .model-item-card {
+      background: rgba(14, 20, 36, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+    .model-item-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(20, 30, 52, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .model-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .model-id-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-mono);
+    }
+    .model-desc-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 34px;
+    }
+    .model-caps-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 8px;
+    }
+    .caps-group {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .cap-badge-mini {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .cap-badge-effort {
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      color: #c084fc;
+    }
+    .credits-text {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--warning);
+      font-weight: 600;
+    }
+    /* Playground */
+    .playground-wrapper {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 960px) {
+      .playground-wrapper { grid-template-columns: 1fr; }
+    }
+    .playground-sidebar {
+      background: rgba(14, 20, 36, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .playground-chat-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-display-panel {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      min-height: 280px;
+      max-height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      font-size: 14px;
+    }
+    .reasoning-box {
+      background: rgba(168, 85, 247, 0.06);
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: #e9d5ff;
+      line-height: 1.55;
+    }
+    .reasoning-title {
+      font-weight: 700;
+      color: #c084fc;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .answer-box {
+      color: var(--text-main);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .chat-input-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .chat-textarea {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 13.5px;
+      resize: vertical;
+      min-height: 48px;
+      outline: none;
+    }
+    .chat-textarea:focus {
+      border-color: var(--primary);
+    }
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      width: 480px;
+      max-width: 90vw;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .url-display-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--primary);
+      word-break: break-all;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    /* Progress Bars */
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    /* Tab Contents */
+    .tab-content-panel { display: none; }
+    .tab-content-panel.active { display: block; }
+    .code-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="layout-container">
+    <!-- Header -->
     <header>
-      <div class="title">⚡ WorkBuddy2API 网关智能中枢</div>
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-pool')">账号与模型资源</button>
-        <button class="tab-btn" onclick="switchTab('tab-tokens')">Token 与输入缓存监控</button>
-        <button class="tab-btn" onclick="switchTab('tab-gateway')">网关接入配置</button>
+      <div class="brand-section">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            WorkBuddy2API
+            <span class="badge-version">v2.1 Pro</span>
+          </div>
+        </div>
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span>网关正常</span>
+        </div>
       </div>
-      <div class="auth-box">
-        <span style="color: var(--muted); font-size: 12px;">Key:</span>
-        <input type="password" id="apiKey" style="width: 140px;" placeholder="test_key">
-        <button onclick="saveKeyAndRefresh()">连接</button>
+
+      <div class="header-actions">
+        <div class="key-input-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M7 14c-2.76 0-5-2.24-5-5s2.24-5 5-5c2.42 0 4.44 1.72 4.9 4h6.1l2 2-2 2-1-1-1 1-1-1-1 1-1-1h-2.1c-.46 2.28-2.48 4-4.9 4zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3z"/></svg>
+          <input type="password" id="apiKey" placeholder="API Key">
+        </div>
+        <button class="btn btn-sm" onclick="saveKeyAndRefresh()">保存 / 刷新</button>
       </div>
     </header>
 
-    <!-- TAB 1: 账号池与核心指标 -->
-    <div id="tab-pool" class="tab-content active">
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div class="grid">
-          <div class="card"><div style="color: var(--muted);">账号总数</div><div class="stat-val" id="totalAccounts">-</div></div>
-          <div class="card"><div style="color: var(--muted);">健康可用</div><div class="stat-val" style="color: var(--success);" id="healthyAccounts">-</div></div>
-          <div class="card"><div style="color: var(--muted);">冷却中</div><div class="stat-val" style="color: var(--warning);" id="coolingAccounts">-</div></div>
-          <div class="card"><div style="color: var(--muted);">已禁用</div><div class="stat-val" style="color: var(--danger);" id="disabledAccounts">-</div></div>
-          <div class="card"><div style="color: var(--muted);">累计总请求数</div><div class="stat-val" id="totalReqs">-</div></div>
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-item active" onclick="switchTab('tab-pool', this)">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        账号与模型资源
+      </button>
+      <button class="nav-tab-item" onclick="switchTab('tab-playground', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+        在线调试 (Playground)
+      </button>
+      <button class="nav-tab-item" onclick="switchTab('tab-tokens', this)">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+        Token / 缓存 / 推理指标
+      </button>
+      <button class="nav-tab-item" onclick="switchTab('tab-metrics', this)">
+        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        实时调用流水 (100条)
+      </button>
+      <button class="nav-tab-item" onclick="switchTab('tab-gateway', this)">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        网关配置与接入
+      </button>
+    </nav>
+
+    <!-- TAB 1: 账号与模型资源 -->
+    <div id="tab-pool" class="tab-content-panel active">
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        <div class="stat-grid">
+          <div class="stat-card" style="--card-accent: var(--primary);">
+            <div class="stat-label">账号总数 <span>POOLS</span></div>
+            <div class="stat-val" id="totalAccounts">-</div>
+            <div class="stat-sub">当前配置的全部账号</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--success);">
+            <div class="stat-label">健康在线 <span>HEALTHY</span></div>
+            <div class="stat-val" style="color: var(--success);" id="healthyAccounts">-</div>
+            <div class="stat-sub">立即可承接流量</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--warning);">
+            <div class="stat-label">冷却保护 <span>COOLING</span></div>
+            <div class="stat-val" style="color: var(--warning);" id="coolingAccounts">-</div>
+            <div class="stat-sub">429 / 额度退避中</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--warning);">
+            <div class="stat-label">🌾 养号中 <span>NURTURE</span></div>
+            <div class="stat-val" style="color: var(--warning);" id="nurtureAccounts">-</div>
+            <div class="stat-sub">0 聊天消耗，仅跑定时任务</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--purple);">
+            <div class="stat-label">累计总请求 <span>CALLS</span></div>
+            <div class="stat-val" style="color: var(--purple);" id="totalReqs1">-</div>
+            <div class="stat-sub">网关出口总次数</div>
+          </div>
         </div>
 
         <div class="card">
-          <div class="card-title">
-            <span>👥 账号池明细与管理</span>
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+              账号池列表与授权治理
+            </div>
             <div style="display: flex; gap: 8px;">
-              <button onclick="startLogin('cn')">+ 添加国内版账号</button>
-              <button onclick="startLogin('global')" style="background: #8b5cf6; color: #fff;">+ 添加国际版账号</button>
+              <button class="btn btn-sm" onclick="startLogin('cn')">+ 添加国内版 (CN)</button>
+              <button class="btn btn-purple btn-sm" onclick="startLogin('global')">+ 添加国际版 (Global)</button>
             </div>
           </div>
-          <div style="overflow-x: auto;">
+          <div class="table-container">
             <table>
               <thead>
                 <tr>
                   <th>UID</th>
                   <th>昵称</th>
-                  <th>域 (Realm)</th>
-                  <th>额度</th>
-                  <th>状态</th>
+                  <th>所属域 (Realm)</th>
+                  <th>可用额度</th>
+                  <th>健康状态</th>
                   <th>成功 / 失败</th>
                   <th>冷却状态 / 原因</th>
-                  <th>管理操作</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody id="accountsTable">
-                <tr><td colspan="8" style="text-align: center; color: var(--muted);">加载中...</td></tr>
+                <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">正在同步账号池状态...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
+        
+        <!-- 自动化任务 (国内版 CN 特色) -->
         <div class="card">
-          <div class="card-title">🤖 客户端可用模型与上下文能力 (<span id="modelCount">0</span>)</div>
-          <div class="models-list" id="modelsList"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: Token 与上下文输入缓存深度监控 -->
-    <div id="tab-tokens" class="tab-content">
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div class="grid">
-          <div class="card"><div style="color: var(--muted);">累计总 Token (输入+输出)</div><div class="stat-val" style="color: var(--primary);" id="totalTokenVal">-</div></div>
-          <div class="card"><div style="color: var(--muted);">🎯 上下文缓存命中率</div><div class="stat-val" style="color: var(--success);" id="globalHitRateVal">- %</div></div>
-          <div class="card"><div style="color: var(--muted);">💾 命中缓存 Token (省流)</div><div class="stat-val" style="color: var(--success);" id="totalCachedVal">-</div></div>
-          <div class="card"><div style="color: var(--muted);">📥 原始输入 / 📤 输出 Token</div><div class="stat-val" style="font-size: 20px;" id="inOutTokenVal">- / -</div></div>
-          <div class="card"><div style="color: var(--muted);">今日总消耗 Token</div><div class="stat-val" id="todayTokenVal">-</div></div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div class="card">
-            <div class="card-title">📊 模型输入与缓存表现排行</div>
-            <div id="modelDistribution" style="display: flex; flex-direction: column; gap: 10px;">暂无调用产生</div>
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+              自动化排程任务看板 (国内版 CN 特色能力)
+            </div>
+            <div style="font-size: 12px; color: var(--text-dim);">后台按计划自动巡检，也支持随时手动单次推进</div>
           </div>
-          <div class="card">
-            <div class="card-title">⏱️ 延迟与传输速率</div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div><b>P50 / P90 首字延迟 (TTFB):</b> <span id="p50p90TTFB">- / -</span> ms</div>
-              <div><b>P50 / P90 请求总耗时:</b> <span id="p50p90Total">- / -</span> ms</div>
-              <div><b>平均生成速率:</b> <span id="avgTPSVal" style="color: var(--success); font-weight: 700;">-</span> T/s</div>
-              <div><b>近期调用成功率:</b> <span id="successRateVal">-</span> %</div>
-              <div><b>网关运行时间:</b> <span id="uptimeVal">-</span> (占用内存: <span id="memAllocVal">-</span> MB)</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+            <div class="code-box" style="flex-direction: column; align-items: flex-start; gap: 8px; background: rgba(14, 20, 36, 0.7); padding: 14px; border-radius: var(--radius-md);">
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <b style="color: #fff;">📅 每日双签到 (领分/解冻)</b>
+                <span class="badge badge-realm-cn">09:00 / 21:00</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">每日自动签到领取积分，查询余额并自动解冻 402 硬冷却账号。</div>
+              <button class="btn btn-outline btn-sm" onclick="triggerTask('checkin', this)" style="width: 100%; margin-top: 4px;">立即执行签到与解冻</button>
+            </div>
+
+            <div class="code-box" style="flex-direction: column; align-items: flex-start; gap: 8px; background: rgba(14, 20, 36, 0.7); padding: 14px; border-radius: var(--radius-md);">
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <b style="color: #fff;">🐾 猫猫旅行 (领宠/出游/领奖)</b>
+                <span class="badge badge-realm-cn">09:00 / 21:00</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">无猫同意协议领养，空闲派出古镇客栈，到站自动领取金币。</div>
+              <button class="btn btn-outline btn-sm" onclick="triggerTask('travel', this)" style="width: 100%; margin-top: 4px;">立即推进一趟旅行</button>
+            </div>
+
+            <div class="code-box" style="flex-direction: column; align-items: flex-start; gap: 8px; background: rgba(14, 20, 36, 0.7); padding: 14px; border-radius: var(--radius-md);">
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <b style="color: #fff;">🔥 每日活跃上报 (连登打卡)</b>
+                <span class="badge badge-realm-cn">10:00</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">每日 1 次模拟对话活跃，点亮连登打卡 (Streak) + 解锁首宠 first_buddy。</div>
+              <button class="btn btn-outline btn-sm" onclick="triggerTask('activity', this)" style="width: 100%; margin-top: 4px;">立即活跃上报打卡</button>
+            </div>
+
+            <div class="code-box" style="flex-direction: column; align-items: flex-start; gap: 8px; background: rgba(14, 20, 36, 0.7); padding: 14px; border-radius: var(--radius-md);">
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <b style="color: #fff;">🛡️ 夜间 Token 保活</b>
+                <span class="badge badge-realm-cn">22:00</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">对全池账号刷新 AccessToken，离线失活账号连续 3 次失败隔离。</div>
+              <button class="btn btn-outline btn-sm" onclick="triggerTask('keepalive', this)" style="width: 100%; margin-top: 4px;">立即刷新保活 Token</button>
             </div>
           </div>
         </div>
 
         <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+              已探测模型资源库 (<span id="modelCount" style="color: var(--primary);">0</span>)
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">点击任意卡片即可在 Playground 中快速选用</div>
+          </div>
+          <div class="model-search-bar">
+            <input type="text" class="model-search-input" id="modelFilterInput" placeholder="🔍 搜索模型名称或特征..." oninput="filterModelCards()">
+            <div class="model-filter-tags">
+              <span class="filter-tag active" onclick="setQuickFilter('all', this)">全部模型</span>
+              <span class="filter-tag" onclick="setQuickFilter('cn', this)" style="border-color: rgba(14, 165, 233, 0.5); color: #38bdf8; font-weight: 600;">🇨🇳 国内版专属模型</span>
+              <span class="filter-tag" onclick="setQuickFilter('global', this)" style="border-color: rgba(168, 85, 247, 0.5); color: #c084fc; font-weight: 600;">🌍 国际版专属模型</span>
+              <span class="filter-tag" onclick="setQuickFilter('1M', this)">1M 超长上下文</span>
+              <span class="filter-tag" onclick="setQuickFilter('reasoning', this)">🧠 深度思考</span>
+              <span class="filter-tag" onclick="setQuickFilter('vision', this)">👁️ 视觉多模态</span>
+            </div>
+          </div>
+          <div class="models-grid-layout" id="modelsGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 在线调试 Playground -->
+    <div id="tab-playground" class="tab-content-panel">
+      <div class="card">
+        <div class="card-header">
           <div class="card-title">
-            <span>📊 最近 100 次调用性能与缓存明细流水</span>
-            <span style="font-size: 12px; color: var(--muted);">实时自动更新</span>
+            <svg viewBox="0 0 24 24"><path d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 16h-4.83l-.59.59L12 20.17l-1.59-1.59-.58-.58H5V4h14v14z"/></svg>
+            模型接口在线调试台 (Playground)
           </div>
-          <div style="overflow-x: auto; max-height: 440px;">
-            <table>
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>模型</th>
-                  <th>推理强度</th>
-                  <th>模式</th>
-                  <th>账号</th>
-                  <th>输入 Token</th>
-                  <th>上下文缓存命中</th>
-                  <th>输出 Token</th>
-                  <th>首字 (TTFB)</th>
-                  <th>总耗时</th>
-                  <th>速率</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody id="metricsTable">
-                <tr><td colspan="12" style="text-align: center; color: var(--muted);">暂无调用流水</td></tr>
-              </tbody>
-            </table>
+          <div style="font-size: 12px; color: var(--text-muted);">直接测试长文本与深度思考表现</div>
+        </div>
+
+        <div class="playground-wrapper">
+          <div class="playground-sidebar">
+            <div class="control-group">
+              <label class="control-label">选择调用模型</label>
+              <select id="chatModel" style="width: 100%; font-weight: 600;"></select>
+            </div>
+
+            <div class="control-group" style="background: rgba(168, 85, 247, 0.08); padding: 10px; border-radius: var(--radius-sm); border: 1px solid rgba(168, 85, 247, 0.2);">
+              <label class="control-label" style="color: var(--purple);">
+                <span>🧠 推理强度 (Reasoning Effort)</span>
+              </label>
+              <select id="chatEffort" style="width: 100%; border-color: rgba(168, 85, 247, 0.5); font-weight: 600;">
+                <option value="">推理: 默认 / 自动</option>
+                <option value="low">low (轻度思考)</option>
+                <option value="medium">medium (适度思考)</option>
+                <option value="high" selected>high (深度思考)</option>
+                <option value="xhigh">xhigh (超强思考)</option>
+                <option value="max">max (极限思考)</option>
+              </select>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">透传给 deepseek-r1 / gpt-6-astra / hy4 等模型</div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">快捷提示词模版</label>
+              <button class="btn btn-outline btn-sm" onclick="setPlaygroundPrompt('请用深度思考，详细推导为什么大语言模型的上下文缓存 (Prompt Caching) 能极大降低首字延迟和计算开销？')">💡 推理: 解释 Prompt 缓存机制</button>
+              <button class="btn btn-outline btn-sm" style="margin-top: 6px;" onclick="setPlaygroundPrompt('写一段优雅的 Go 语言代码，实现带有指数退避重试的 HTTP Client。')">💻 编码: Go 指数退避客户端</button>
+            </div>
+          </div>
+
+          <div class="playground-chat-area">
+            <div class="chat-display-panel" id="chatDisplay">
+              <div style="color: var(--text-dim); text-align: center; margin-top: 80px;">
+                👈 请在左侧选择模型与推理强度，并在下方输入测试内容
+              </div>
+            </div>
+
+            <div class="chat-input-bar">
+              <textarea class="chat-textarea" id="chatInput" placeholder="输入你想测试的任何问题..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+              <button class="btn btn-purple" id="sendBtn" onclick="sendChat()" style="height: 48px; min-width: 90px;">发送</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- TAB 3: 网关配置与客户端接入 -->
-    <div id="tab-gateway" class="tab-content">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div class="card">
-          <div class="card-title">⚙️ 网关运行时配置</div>
-          <div style="display: flex; flex-direction: column; gap: 8px;" id="gatewayConfig">加载中...</div>
+    <!-- TAB 3: Token / 缓存 / 推理指标 -->
+    <div id="tab-tokens" class="tab-content-panel">
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        <div class="stat-grid">
+          <div class="stat-card" style="--card-accent: var(--primary);">
+            <div class="stat-label">累计消耗总 Token <span>TOTAL</span></div>
+            <div class="stat-val" style="color: var(--primary);" id="totalTokenVal">-</div>
+            <div class="stat-sub">输入 + 输出全量</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--success);">
+            <div class="stat-label">🎯 上下文缓存命中率 <span>HIT RATE</span></div>
+            <div class="stat-val" style="color: var(--success);" id="globalHitRateVal">- %</div>
+            <div class="stat-sub">Prompt Cache 命中比例</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--success);">
+            <div class="stat-label">💾 命中缓存 Token (省流) <span>SAVED</span></div>
+            <div class="stat-val" style="color: var(--success);" id="totalCachedVal">-</div>
+            <div class="stat-sub">免于重新计算的 Context</div>
+          </div>
+          <div class="stat-card" style="--card-accent: #60a5fa;">
+            <div class="stat-label">📥 输入 / 📤 输出 Token <span>IN/OUT</span></div>
+            <div class="stat-val" style="font-size: 20px;" id="inOutTokenVal">- / -</div>
+            <div class="stat-sub">提示词与生成对比</div>
+          </div>
+          <div class="stat-card" style="--card-accent: var(--purple);">
+            <div class="stat-label">今日消耗 Token <span>TODAY</span></div>
+            <div class="stat-val" style="color: var(--purple);" id="todayTokenVal">-</div>
+            <div class="stat-sub">零点起自动重置</div>
+          </div>
         </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                🧠 推理强度 (Reasoning Effort) 调用分布
+              </div>
+            </div>
+            <div id="effortDistribution" style="display: flex; flex-direction: column; gap: 12px;">暂无携带推理强度的调用</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                📊 模型消耗与缓存表现排行
+              </div>
+            </div>
+            <div id="modelDistribution" style="display: flex; flex-direction: column; gap: 12px;">暂无调用产生</div>
+          </div>
+        </div>
+
         <div class="card">
-          <div class="card-title">🔌 客户端标准接入参考</div>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div>
-              <div style="color: var(--muted); font-size: 12px; margin-bottom: 4px;">OpenAI Base URL:</div>
-              <input type="text" id="cfgBaseURL" readonly style="width: 100%;">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+              延迟阶梯与性能概览
             </div>
-            <div>
-              <div style="color: var(--muted); font-size: 12px; margin-bottom: 4px;">API Key:</div>
-              <input type="text" id="cfgAPIKey" readonly style="width: 100%;">
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+            <div class="code-box"><span>P50 首字延迟 (TTFB)</span><b id="p50TTFB">- ms</b></div>
+            <div class="code-box"><span>P90 首字延迟 (TTFB)</span><b id="p90TTFB">- ms</b></div>
+            <div class="code-box"><span>P50 请求总耗时</span><b id="p50Total">- ms</b></div>
+            <div class="code-box"><span>P90 请求总耗时</span><b id="p90Total">- ms</b></div>
+            <div class="code-box"><span>平均生成流速</span><b style="color: var(--success);" id="avgTPSVal">- T/s</b></div>
+            <div class="code-box"><span>网关 Uptime / 内存</span><span id="sysStatsText">-</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: 实时调用流水 -->
+    <div id="tab-metrics" class="tab-content-panel">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            最近 100 次调用性能与推理流水
+          </div>
+          <span style="font-size: 12px; color: var(--text-dim); font-family: var(--font-mono);">AUTO-REFRESH: 3s</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>模型</th>
+                <th>🧠 推理强度</th>
+                <th>模式</th>
+                <th>账号</th>
+                <th>输入 Token</th>
+                <th>上下文命中</th>
+                <th>输出 Token</th>
+                <th>首字 (TTFB)</th>
+                <th>总耗时</th>
+                <th>速率</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="metricsTable">
+              <tr><td colspan="12" style="text-align: center; color: var(--text-muted);">暂无调用流水</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: 网关配置与接入 -->
+    <div id="tab-gateway" class="tab-content-panel">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚙️ 多账号调度策略与网关设置</div>
+            <span style="font-size: 12px; color: var(--text-dim);">实时修改，即时热生效</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="control-group">
+              <label class="control-label">
+                <span>多账号轮换与调度模式 (Routing Policy)</span>
+              </label>
+              <select id="setRealmPref" style="width: 100%; font-weight: 600; padding: 10px;">
+                <option value="balanced">🌟 智能动态加权（默认：按额度多寡 + 闲置时长补偿 + 成功率综合调度）</option>
+                <option value="cn_first">🇨🇳 优先使用国内版（CN First：只要国内号健康就优先用，遇到限流才切国际版）</option>
+                <option value="global_first">🌍 优先使用国际版（Global First：只要国际号健康就优先用，遇到限流才切国内版）</option>
+                <option value="round_robin">🔄 严格交替轮流（Round Robin：忽略额度差异，纯按闲置时长严格 1:1 轮换）</option>
+              </select>
+              <div style="font-size: 11.5px; color: var(--text-dim);">无论选择哪个模式，当主力账号发生 429 限流或 402 余额不足时，都会自动无缝秒级切换至备用账号！</div>
             </div>
-            <div style="font-size: 12px; color: var(--muted); line-height: 1.5;">
-              接入 NextChat、Chatbox、Cherry Studio、Cursor、Cline、Open WebUI 时，直接填入上方地址和密钥即可。
+
+            <div class="control-group">
+              <label class="control-label">
+                <span>单账号并发处理上限 (Max In Flight)</span>
+                <span style="font-size: 11px; color: var(--text-dim);">超出自动派给另一个号</span>
+              </label>
+              <input type="number" id="setMaxInFlight" min="1" max="10" value="3" style="width: 100%;">
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">API 鉴权密钥 (API Key)</label>
+              <input type="text" id="setAPIKey" placeholder="输入新的 API Key" style="width: 100%;">
+            </div>
+
+            <button class="btn btn-purple" onclick="saveGatewaySettings()" style="height: 42px; margin-top: 6px;">💾 保存配置并即时热生效</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔌 客户端标准接入配置</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="control-group">
+              <label class="control-label">OpenAI Base URL</label>
+              <div class="code-box">
+                <span id="cfgBaseURL" style="user-select: all;">http://127.0.0.1:8848/v1</span>
+                <button class="btn btn-outline btn-sm" onclick="copyText('cfgBaseURL')">复制</button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">API Key</label>
+              <div class="code-box">
+                <span id="cfgAPIKey" style="user-select: all;">test_key</span>
+                <button class="btn btn-outline btn-sm" onclick="copyText('cfgAPIKey')">复制</button>
+              </div>
+            </div>
+
+            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6; background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              💡 <b>无缝兼容任何客户端</b>：在 NextChat、Cherry Studio、Chatbox、Cursor、Cline、Open WebUI 等工具中，选择 <b>OpenAI 格式</b>，填入上方 Base URL 与 Key 即可立即享用。
             </div>
           </div>
         </div>
@@ -200,18 +1157,25 @@
   </div>
 
   <!-- OAuth 登录弹窗 -->
-  <div class="modal" id="loginModal">
-    <div class="modal-content">
-      <div style="font-weight: 700; font-size: 16px;" id="loginTitle">OAuth 授权登录</div>
-      <div style="font-size: 13px; color: var(--muted);">请点击下方按钮打开授权页面，或复制链接至浏览器完成登录。</div>
-      <div style="background: #090d16; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 12px;" id="loginUrlText">正在获取授权地址...</div>
-      <div style="display: flex; gap: 8px;">
-        <button onclick="openAuthUrl()" id="openUrlBtn" style="flex: 1;" disabled>在浏览器打开</button>
-        <button onclick="copyAuthUrl()" class="btn-secondary">复制链接</button>
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="loginTitle">OAuth 授权登录</span>
+        <button class="btn-outline btn-sm" onclick="closeModal()">✕</button>
       </div>
-      <div style="font-size: 13px; color: var(--warning);" id="pollStatus">等待用户授权中...</div>
-      <div style="display: flex; justify-content: flex-end;">
-        <button onclick="closeModal()" class="btn-secondary">取消关闭</button>
+      <div style="font-size: 13px; color: var(--text-muted);">
+        请点击下方按钮前往官方授权页，或复制链接在浏览器中完成登录：
+      </div>
+      <div class="url-display-box" id="loginUrlText">
+        正在生成授权会话...
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-purple" id="openUrlBtn" onclick="openAuthUrl()" style="flex: 1;" disabled>在浏览器打开授权</button>
+        <button class="btn btn-outline" onclick="copyAuthUrl()">复制链接</button>
+      </div>
+      <div style="font-size: 13px; color: var(--warning); display: flex; align-items: center; gap: 8px;" id="pollStatus">
+        <span class="status-dot" style="background: var(--warning); box-shadow: 0 0 8px var(--warning);"></span>
+        等待授权中（网关自动监听）...
       </div>
     </div>
   </div>
@@ -220,19 +1184,21 @@
     const keyInput = document.getElementById('apiKey');
     keyInput.value = localStorage.getItem('wb2a_key') || 'test_key';
     let currentAuthUrl = '', currentAuthState = '', currentAuthRealm = '', pollTimer = null;
+    let cachedModelList = [];
+    let activeFilter = 'all';
 
     function getHeaders() {
       const k = keyInput.value.trim();
-      return k ? { 'Authorization': `Bearer ${k}` } : {};
+      return k ? { 'Authorization': 'Bearer ' + k } : {};
     }
     function saveKeyAndRefresh() {
       localStorage.setItem('wb2a_key', keyInput.value.trim());
-      loadStatus(); loadMetrics(); loadGateway();
+      loadStatus(); loadMetrics(); loadGateway(); loadModels();
     }
-    function switchTab(id) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      event.target.classList.add('active');
+    function switchTab(id, el) {
+      document.querySelectorAll('.nav-tab-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content-panel').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
       document.getElementById(id).classList.add('active');
     }
 
@@ -241,7 +1207,6 @@
       if (num >= 1000) return (num / 1000).toFixed(1) + ' K';
       return num;
     }
-
     function formatSeconds(sec) {
       const d = Math.floor(sec / 86400);
       const h = Math.floor((sec % 86400) / 3600);
@@ -253,37 +1218,42 @@
       try {
         const res = await fetch('/status', { headers: getHeaders() });
         const data = await res.json();
-        document.getElementById('totalAccounts').innerText = data.total ?? 0;
-        document.getElementById('healthyAccounts').innerText = data.healthy ?? 0;
-        document.getElementById('coolingAccounts').innerText = data.cooling ?? 0;
-        document.getElementById('disabledAccounts').innerText = data.disabled ?? 0;
+        const accounts = data.accounts || [];
+        document.getElementById('totalAccounts').innerText = data.total ?? accounts.length;
+        const pausedCount = accounts.filter(a => a.paused).length;
+        if (document.getElementById('nurtureAccounts')) {
+          document.getElementById('nurtureAccounts').innerText = pausedCount;
+        }
+        document.getElementById('healthyAccounts').innerText = accounts.filter(a => !a.paused && !a.disabled && !a.cooling).length;
+        document.getElementById('coolingAccounts').innerText = accounts.filter(a => a.cooling).length;
 
         const tbody = document.getElementById('accountsTable');
         if (!data.accounts || data.accounts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--muted);">暂无账号，请点击右上角按钮添加</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">暂无账号，请点击右上角按钮添加</td></tr>';
           return;
         }
         tbody.innerHTML = data.accounts.map(a => {
-          let badge = a.disabled ? '<span class="badge badge-disabled">已禁用</span>' :
-                      a.cooling ? '<span class="badge badge-cooling">冷却中</span>' :
-                      '<span class="badge badge-healthy">健康</span>';
-          let realm = a.realm === 'global' ? '<span class="badge badge-global">Global</span>' : '<span class="badge badge-cn">CN</span>';
-          let cool = a.cooling ? `${a.cool_remaining}s (${a.cool_kind || a.reason || '限流'})` : '-';
-          return `
-            <tr>
-              <td><code>${a.uid}</code></td>
-              <td>${a.nickname || '-'}</td>
-              <td>${realm}</td>
-              <td style="font-weight: 600;">${a.credits ?? '-'}</td>
-              <td>${badge}</td>
-              <td><span style="color: var(--success);">${a.success_count||0}</span> / <span style="color: var(--danger);">${a.err_total||0}</span></td>
-              <td style="font-size: 12px; color: var(--muted);">${cool}</td>
-              <td>
-                <button style="padding: 2px 8px; font-size: 11px;" onclick="reviveAccount('${a.uid}')">复活</button>
-                <button class="btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="deleteAccount('${a.uid}')">删除</button>
-              </td>
-            </tr>
-          `;
+          let isPaused = a.paused;
+          let badge = a.disabled ? '<span class="badge badge-status-disabled">❌ 会话失效</span>' :
+                      isPaused ? '<span class="badge" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35);">🌾 养号中 (仅跑任务)</span>' :
+                      a.cooling ? '<span class="badge badge-status-cooling">⏳ 冷却中</span>' :
+                      '<span class="badge badge-status-healthy">● 正常接单</span>';
+          let toggleBtn = isPaused ?
+            '<button class="btn btn-sm" style="background: var(--success); color: #fff;" data-uid="' + a.uid + '" onclick="toggleNurture(this.dataset.uid, false)">▶️ 恢复接单</button>' :
+            '<button class="btn btn-outline btn-sm" style="color: var(--warning); border-color: rgba(245,158,11,0.4);" data-uid="' + a.uid + '" onclick="toggleNurture(this.dataset.uid, true)">🌾 开启养号</button>';
+          let realm = a.realm === 'global' ? '<span class="badge badge-realm-global">Global 国际版</span>' : '<span class="badge badge-realm-cn">CN 国内版</span>';
+          let cool = a.cooling ? (a.cool_remaining + 's (' + (a.cool_kind || a.reason || '限流') + ')') : '-';
+          return '<tr>' +
+            '<td><code style="font-family: var(--font-mono); color: var(--text-muted);">' + a.uid + '</code></td>' +
+            '<td><b style="color: #fff;">' + (a.nickname || '-') + '</b></td>' +
+            '<td>' + realm + '</td>' +
+            '<td><span style="font-family: var(--font-mono); font-weight: 700; color: #fff;">' + (a.credits ?? '-') + '</span></td>' +
+            '<td>' + badge + '</td>' +
+            '<td><span style="color: var(--success); font-weight: 600;">' + (a.success_count||0) + '</span> <span style="color: var(--text-dim);">/</span> <span style="color: var(--danger);">' + (a.err_total||0) + '</span></td>' +
+            '<td style="font-size: 12px; color: var(--text-muted);">' + cool + '</td>' +
+            '<td><div style="display: flex; gap: 6px;">' + toggleBtn +              '<button class="btn btn-danger btn-sm" data-uid="' + a.uid + '" onclick="deleteAccount(this.dataset.uid)">删除</button>' +
+            '</div></td>' +
+          '</tr>';
         }).join('');
       } catch (e) {}
     }
@@ -299,21 +1269,43 @@
         document.getElementById('totalTokenVal').innerText = formatNumber(t.total || 0);
         document.getElementById('totalCachedVal').innerText = formatNumber(t.cached_tokens || 0);
         document.getElementById('globalHitRateVal').innerText = (t.cache_hit_rate || 0).toFixed(1) + ' %';
-        document.getElementById('inOutTokenVal').innerText = `${formatNumber(t.prompt_tokens || 0)} / ${formatNumber(t.completion_tokens || 0)}`;
+        document.getElementById('inOutTokenVal').innerText = formatNumber(t.prompt_tokens || 0) + ' / ' + formatNumber(t.completion_tokens || 0);
         document.getElementById('todayTokenVal').innerText = formatNumber(t.today || 0);
-        document.getElementById('totalReqs').innerText = t.total_reqs || 0;
+        document.getElementById('totalReqs1').innerText = t.total_reqs || 0;
 
         let sRate = t.total_reqs > 0 ? ((t.success_reqs / t.total_reqs) * 100).toFixed(0) : '-';
-        document.getElementById('successRateVal').innerText = sRate + ' %';
-        document.getElementById('p50p90TTFB').innerText = `${l.p50_ttfb || 0} / ${l.p90_ttfb || 0}`;
-        document.getElementById('p50p90Total').innerText = `${l.p50_total || 0} / ${l.p90_total || 0}`;
-        document.getElementById('memAllocVal').innerText = s.memory_alloc_mb || '-';
-        document.getElementById('uptimeVal').innerText = formatSeconds(s.uptime_seconds || 0);
+        document.getElementById('p50TTFB').innerText = (l.p50_ttfb || 0) + ' ms';
+        document.getElementById('p90TTFB').innerText = (l.p90_ttfb || 0) + ' ms';
+        document.getElementById('p50Total').innerText = (l.p50_total || 0) + ' ms';
+        document.getElementById('p90Total').innerText = (l.p90_total || 0) + ' ms';
+        document.getElementById('sysStatsText').innerText = formatSeconds(s.uptime_seconds || 0) + ' / ' + (s.memory_alloc_mb || '-') + ' MB';
 
+        // 推理强度分布
+        const eUsage = t.effort_usage || {};
+        const eKeys = Object.keys(eUsage);
+        if (eKeys.length === 0) {
+          document.getElementById('effortDistribution').innerHTML = '<div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px;">暂无携带推理强度的请求</div>';
+        } else {
+          let maxE = 0;
+          eKeys.forEach(k => { if (eUsage[k] > maxE) maxE = eUsage[k]; });
+          document.getElementById('effortDistribution').innerHTML = eKeys.map(k => {
+            const count = eUsage[k];
+            const pct = maxE > 0 ? (count / maxE * 100).toFixed(0) : 0;
+            return '<div>' +
+              '<div style="display: flex; justify-content: space-between; font-size: 13px;">' +
+                '<span class="badge badge-effort-pill">🧠 ' + k + '</span>' +
+                '<b>' + count + ' 次调用</b>' +
+              '</div>' +
+              '<div class="progress-track"><div class="progress-fill" style="width: ' + pct + '%; background: var(--purple);"></div></div>' +
+            '</div>';
+          }).join('');
+        }
+
+        // 模型分布
         const mUsage = t.model_usage || {};
         const mKeys = Object.keys(mUsage);
         if (mKeys.length === 0) {
-          document.getElementById('modelDistribution').innerHTML = '<div style="color: var(--muted);">暂无调用产生</div>';
+          document.getElementById('modelDistribution').innerHTML = '<div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px;">暂无调用产生</div>';
         } else {
           let maxTok = 0;
           mKeys.forEach(k => {
@@ -325,42 +1317,42 @@
             const tot = u.prompt_tokens + u.complete_tokens;
             const pct = maxTok > 0 ? (tot / maxTok * 100).toFixed(0) : 0;
             const hitPct = u.prompt_tokens > 0 ? (u.cached_tokens / u.prompt_tokens * 100).toFixed(1) : '0.0';
-            return `
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                  <span><code>${k}</code> (${u.calls}次)</span>
-                  <span>总 ${formatNumber(tot)} | 命中缓存: <b style="color: var(--success);">${formatNumber(u.cached_tokens)} (${hitPct}%)</b></span>
-                </div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%"></div></div>
-              </div>
-            `;
+            return '<div>' +
+              '<div style="display: flex; justify-content: space-between; font-size: 13px;">' +
+                '<span style="font-family: var(--font-mono); font-weight: 600;">' + k + ' <span style="color: var(--text-dim); font-size: 11px;">(' + u.calls + '次)</span></span>' +
+                '<span style="font-size: 12px;">' + formatNumber(tot) + ' tok | 命中: <b style="color: var(--success);">' + formatNumber(u.cached_tokens) + ' (' + hitPct + '%)</b></span>' +
+              '</div>' +
+              '<div class="progress-track"><div class="progress-fill" style="width: ' + pct + '%;"></div></div>' +
+            '</div>';
           }).join('');
         }
 
+        // 流水表格
         const records = data.records || [];
         if (records.length > 0) {
           let totalTPS = 0, countTPS = 0;
           records.forEach(r => { if (r.speed_tps > 0) { totalTPS += r.speed_tps; countTPS++; } });
-          document.getElementById('avgTPSVal').innerText = countTPS > 0 ? (totalTPS / countTPS).toFixed(1) : '-';
+          document.getElementById('avgTPSVal').innerText = countTPS > 0 ? (totalTPS / countTPS).toFixed(1) + ' T/s' : '-';
 
           document.getElementById('metricsTable').innerHTML = records.map(r => {
-            let cacheBadge = r.cached_tokens > 0 ? `<span class="tag-cached">${r.cached_tokens} (${r.cache_hit_rate.toFixed(0)}%)</span>` : '<span style="color: var(--muted);">-</span>';
-            return `
-              <tr>
-                <td>${r.time}</td>
-                <td><code>${r.model}</code></td>
-                <td>${r.effort ? `<span class="badge" style="background:#4338ca;color:#fff;">${r.effort}</span>` : '<span style="color:var(--muted);">-</span>'}</td>
-                <td>${r.mode}</td>
-                <td><code>${(r.uid||'').slice(0,8)}</code></td>
-                <td>${r.prompt_tokens > 0 ? r.prompt_tokens : '-'}</td>
-                <td>${cacheBadge}</td>
-                <td>${r.complete_tokens > 0 ? r.complete_tokens : '-'}</td>
-                <td>${r.ttfb_ms} ms</td>
-                <td>${r.total_ms} ms</td>
-                <td>${r.speed_tps > 0 ? r.speed_tps.toFixed(1) + ' T/s' : '-'}</td>
-                <td><span style="color: ${r.status===200 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${r.status}</span></td>
-              </tr>
-            `;
+            let cacheBadge = r.cached_tokens > 0 ? ('<span class="badge badge-cached-pill">' + r.cached_tokens + ' (' + r.cache_hit_rate.toFixed(0) + '%)</span>') : '<span style="color: var(--text-dim);">-</span>';
+            let effortBadge = r.effort ? ('<span class="badge badge-effort-pill">' + r.effort + '</span>') : '<span style="color: var(--text-dim);">-</span>';
+            let uidShort = (r.uid||'').slice(0,8);
+            let statusBadge = r.status === 200 ? '<span style="color: var(--success); font-weight: 700;">200 OK</span>' : '<span style="color: var(--danger); font-weight: 700;">' + r.status + '</span>';
+            return '<tr>' +
+              '<td style="font-family: var(--font-mono); color: var(--text-muted);">' + r.time + '</td>' +
+              '<td><code style="font-family: var(--font-mono); color: #fff;">' + r.model + '</code></td>' +
+              '<td>' + effortBadge + '</td>' +
+              '<td><span class="badge" style="background: rgba(255,255,255,0.05);">' + r.mode + '</span></td>' +
+              '<td><code style="font-family: var(--font-mono); color: var(--text-muted);">' + uidShort + '</code></td>' +
+              '<td style="font-family: var(--font-mono);">' + (r.prompt_tokens > 0 ? r.prompt_tokens : '-') + '</td>' +
+              '<td>' + cacheBadge + '</td>' +
+              '<td style="font-family: var(--font-mono);">' + (r.complete_tokens > 0 ? r.complete_tokens : '-') + '</td>' +
+              '<td style="font-family: var(--font-mono);">' + r.ttfb_ms + ' ms</td>' +
+              '<td style="font-family: var(--font-mono);">' + r.total_ms + ' ms</td>' +
+              '<td style="font-family: var(--font-mono); color: var(--success); font-weight: 600;">' + (r.speed_tps > 0 ? r.speed_tps.toFixed(1) + ' T/s' : '-') + '</td>' +
+              '<td>' + statusBadge + '</td>' +
+            '</tr>';
           }).join('');
         }
       } catch (e) {}
@@ -368,17 +1360,25 @@
 
     async function loadGateway() {
       try {
-        const res = await fetch('/api/gateway', { headers: getHeaders() });
+        const res = await fetch('/api/settings', { headers: getHeaders() });
         const cfg = await res.json();
-        document.getElementById('cfgBaseURL').value = `${window.location.origin}/v1`;
-        document.getElementById('cfgAPIKey').value = cfg.api_key || 'test_key';
-        document.getElementById('gatewayConfig').innerHTML = `
-          <div><b>API Key:</b> <code>${cfg.api_key || '（未设置）'}</code></div>
-          <div><b>提示词重写模式:</b> <code>${cfg.prompt_mode}</code></div>
-          <div><b>单请求体上限:</b> ${cfg.max_body_mb} MB</div>
-          <div><b>软限流冷却基数:</b> ${cfg.soft_rate}</div>
-          <div><b>会话粘性路由:</b> ${cfg.session_mode ? '已开启' : '未开启'}</div>
-        `;
+        document.getElementById('cfgBaseURL').innerText = window.location.origin + '/v1';
+        document.getElementById('cfgAPIKey').innerText = cfg.api_key || 'test_key';
+        if (document.getElementById('setAPIKey')) {
+          document.getElementById('setAPIKey').value = cfg.api_key || '';
+        }
+        if (document.getElementById('setRealmPref') && cfg.realm_pref) {
+          document.getElementById('setRealmPref').value = cfg.realm_pref;
+        }
+        if (document.getElementById('setMaxInFlight') && cfg.max_in_flight) {
+          document.getElementById('setMaxInFlight').value = cfg.max_in_flight;
+        }
+        document.getElementById('gatewayConfig').innerHTML =
+          '<div class="code-box"><span>API 鉴权密钥 (api_key)</span><code>' + (cfg.api_key || '（未设置）') + '</code></div>' +
+          '<div class="code-box"><span>提示词净化模式 (prompt.mode)</span><code>' + cfg.prompt_mode + '</code></div>' +
+          '<div class="code-box"><span>单请求体积上限 (max_body_mb)</span><code>' + cfg.max_body_mb + ' MB</code></div>' +
+          '<div class="code-box"><span>软限流冷却基数 (soft_rate)</span><code>' + cfg.soft_rate + '</code></div>' +
+          '<div class="code-box"><span>会话粘性路由器 (session_sticky)</span><b style="color: var(--success);">' + (cfg.session_mode ? 'ENABLED' : 'DISABLED') + '</b></div>';
       } catch (e) {}
     }
 
@@ -386,47 +1386,181 @@
       try {
         const res = await fetch('/v1/models', { headers: getHeaders() });
         const data = await res.json();
-        const list = data.data || [];
-        document.getElementById('modelCount').innerText = list.length;
-        document.getElementById('modelsList').innerHTML = list.map(m => {
-          let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M' : Math.round(m.context_length/1024)+'k') : '128k';
-          let caps = [];
-          if (m.supports_vision) caps.push('👁️视觉');
-          if (m.supports_reasoning) caps.push('🧠思考' + (m.reasoning_efforts ? ': ' + m.reasoning_efforts.join('/') : ''));
-          if (m.supports_tools) caps.push('🛠️工具');
-          let creditsBadge = m.credits ? `<span style="font-size:11px; color: var(--warning);">${m.credits}</span>` : '';
-          return `
-            <div class="model-card">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="color: var(--text);">${m.id}</b>
-                <span class="badge badge-cn">${ctx} 上下文</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; gap:4px;">${caps.map(c => `<span class="cap-badge">${c}</span>`).join('')}</div>
-                ${creditsBadge}
-              </div>
-            </div>
-          `;
-        }).join('');
+        cachedModelList = data.data || [];
+        document.getElementById('modelCount').innerText = cachedModelList.length;
+
+        // 填充 Playground 选项
+        const select = document.getElementById('chatModel');
+        const cnGroup = cachedModelList.filter(m => m.realm === 'cn');
+        const globalGroup = cachedModelList.filter(m => m.realm === 'global');
+
+        let ddHTML = '<optgroup label="🇨🇳 国内版可用模型">';
+        ddHTML += cnGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
+        ddHTML += '</optgroup><optgroup label="🌍 国际版可用模型">';
+        ddHTML += globalGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
+        ddHTML += '</optgroup>';
+        select.innerHTML = ddHTML;
+
+        renderModelCards();
       } catch (e) {}
+    }
+
+    function setQuickFilter(f, el) {
+      activeFilter = f;
+      document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      renderModelCards();
+    }
+
+    function filterModelCards() {
+      renderModelCards();
+    }
+
+    function renderModelCards() {
+      const filterText = (document.getElementById('modelFilterInput').value || '').toLowerCase();
+      const grid = document.getElementById('modelsGrid');
+      
+      const filtered = cachedModelList.filter(m => {
+        if (filterText && !m.id.toLowerCase().includes(filterText) && !(m.description||'').toLowerCase().includes(filterText)) {
+          return false;
+        }
+        if (activeFilter === 'global' && m.realm !== 'global') return false;
+        if (activeFilter === 'cn' && m.realm !== 'cn') return false;
+        if (activeFilter === '1M' && (!m.context_length || m.context_length < 1000000)) return false;
+        if (activeFilter === 'reasoning' && !m.supports_reasoning) return false;
+        if (activeFilter === 'vision' && !m.supports_vision) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 30px;">没有匹配的模型</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(m => {
+        let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M 上下文' : Math.round(m.context_length/1024)+'k 上下文') : '128k 上下文';
+        let caps = [];
+        if (m.supports_vision) caps.push('<span class="cap-badge-mini">👁️ 视觉</span>');
+        if (m.supports_tools) caps.push('<span class="cap-badge-mini">🛠️ 工具</span>');
+        if (m.supports_reasoning) {
+          let effStr = m.reasoning_efforts ? m.reasoning_efforts.join('/') : '支持';
+          caps.push('<span class="cap-badge-mini cap-badge-effort">🧠 思考: ' + effStr + '</span>');
+        }
+        let creditsBadge = m.credits ? ('<span class="credits-text">' + m.credits + '</span>') : '';
+          let realmBadge = '';
+          if (m.realm === 'both') {
+            realmBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">🌐 双域通用</span>';
+          } else if (m.realm === 'global') {
+            realmBadge = '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">🌍 仅国际版</span>';
+          } else if (m.realm === 'cn') {
+            realmBadge = '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">🇨🇳 仅国内版</span>';
+          }
+          return '<div class="model-item-card" data-model="' + m.id + '" onclick="selectModelForPlayground(this.dataset.model)">' +
+            '<div class="model-card-top">' +
+              '<div style="display: flex; align-items: center; gap: 8px;">' +
+                '<span class="model-id-title">' + m.id + '</span>' +
+                realmBadge +
+              '</div>' +
+              '<span class="badge badge-context-pill">' + ctx + '</span>' +
+            '</div>' +
+          '<div class="model-desc-text">' + (m.description || '官方兼容模型，支持标准流式与工具调用。') + '</div>' +
+          '<div class="model-caps-row">' +
+            '<div class="caps-group">' + caps.join('') + '</div>' +
+            creditsBadge +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function selectModelForPlayground(id) {
+      switchTab('tab-playground', document.querySelectorAll('.nav-tab-item')[1]);
+      document.getElementById('chatModel').value = id;
+      document.getElementById('chatInput').focus();
+    }
+
+    function setPlaygroundPrompt(p) {
+      document.getElementById('chatInput').value = p;
+      document.getElementById('chatInput').focus();
+    }
+
+    async function sendChat() {
+      const model = document.getElementById('chatModel').value;
+      const effort = document.getElementById('chatEffort').value;
+      const input = document.getElementById('chatInput');
+      const display = document.getElementById('chatDisplay');
+      const btn = document.getElementById('sendBtn');
+      const text = input.value.trim();
+      if (!text) return;
+
+      btn.disabled = true;
+      btn.innerText = '生成中...';
+      display.innerHTML = '<div style="color: var(--primary);"><span class="status-dot"></span> 正在请求模型（' + model + '）...</div>';
+      const t0 = performance.now();
+      try {
+        const bodyObj = {
+          model: model,
+          messages: [{ role: 'user', content: text }],
+          stream: false
+        };
+        if (effort) {
+          bodyObj.reasoning_effort = effort;
+        }
+
+        const res = await fetch('/v1/chat/completions', {
+          method: 'POST',
+          headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify(bodyObj)
+        });
+        const data = await res.json();
+        const cost = ((performance.now() - t0) / 1000).toFixed(2);
+        if (data.choices && data.choices[0]) {
+          let ans = data.choices[0].message.content || '';
+          let reasoning = data.choices[0].message.reasoning_content || '';
+          
+          let headerHTML = '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">' +
+            '⏱️ 耗时 ' + cost + 's | 模型: <code>' + (data.model || model) + '</code>' +
+            (effort ? ' | 推理档位: <span class="badge badge-effort-pill">' + effort + '</span>' : '') +
+            '</div>';
+
+          let reasoningHTML = '';
+          if (reasoning) {
+            reasoningHTML = '<div class="reasoning-box">' +
+              '<div class="reasoning-title">🧠 深度思考过程 (Thinking Process)</div>' +
+              reasoning +
+            '</div>';
+          }
+
+          let answerHTML = '<div class="answer-box">' + ans + '</div>';
+
+          display.innerHTML = headerHTML + reasoningHTML + answerHTML;
+        } else {
+          display.innerHTML = '<div style="color: var(--danger);">❌ 请求异常：<pre style="margin-top:8px;">' + JSON.stringify(data, null, 2) + '</pre></div>';
+        }
+      } catch (e) {
+        display.innerHTML = '<div style="color: var(--danger);">❌ 请求失败: ' + e.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '发送';
+        loadMetrics();
+      }
     }
 
     async function startLogin(realm) {
       currentAuthRealm = realm;
-      document.getElementById('loginTitle').innerText = realm === 'global' ? '添加国际版账号' : '添加国内版账号';
-      document.getElementById('loginUrlText').innerText = '正在生成安全授权链接...';
-      document.getElementById('pollStatus').innerText = '正在建立会话...';
+      document.getElementById('loginTitle').innerText = realm === 'global' ? '添加国际版账号 (Global)' : '添加国内版账号 (CN)';
+      document.getElementById('loginUrlText').innerText = '正在生成安全授权会话...';
+      document.getElementById('pollStatus').innerHTML = '<span class="status-dot" style="background: var(--warning);"></span> 建立握手中...';
       document.getElementById('openUrlBtn').disabled = true;
-      document.getElementById('loginModal').classList.add('show');
+      document.getElementById('loginModal').classList.add('active');
 
-      const res = await fetch(`/api/auth/start?realm=${realm}`, { method: 'POST', headers: getHeaders() });
+      const res = await fetch('/api/auth/start?realm=' + realm, { method: 'POST', headers: getHeaders() });
       const data = await res.json();
       if (data.auth_url) {
         currentAuthUrl = data.auth_url;
         currentAuthState = data.state;
         document.getElementById('loginUrlText').innerText = currentAuthUrl;
         document.getElementById('openUrlBtn').disabled = false;
-        document.getElementById('pollStatus').innerText = '等待浏览器完成授权...（自动监听中）';
+        document.getElementById('pollStatus').innerHTML = '<span class="status-dot" style="background: var(--warning);"></span> 等待授权中（网关自动监听）...';
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(pollAuth, 2500);
       }
@@ -437,13 +1571,13 @@
       try {
         const res = await fetch('/api/auth/poll', {
           method: 'POST',
-          headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+          headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
           body: JSON.stringify({ state: currentAuthState, realm: currentAuthRealm })
         });
         const data = await res.json();
         if (data.status === 'success') {
           clearInterval(pollTimer);
-          document.getElementById('pollStatus').innerHTML = `<span style="color: var(--success);">授权成功！UID: ${data.uid}（已加入账号池）</span>`;
+          document.getElementById('pollStatus').innerHTML = '<span class="status-dot" style="background: var(--success);"></span> 授权成功！UID: ' + data.uid + '（已加入账号池）';
           setTimeout(() => { closeModal(); loadStatus(); }, 1200);
         }
       } catch (e) {}
@@ -454,17 +1588,21 @@
       navigator.clipboard.writeText(currentAuthUrl);
       alert('授权链接已复制到剪贴板！');
     }
+    function copyText(id) {
+      navigator.clipboard.writeText(document.getElementById(id).innerText);
+      alert('已复制到剪贴板！');
+    }
     function closeModal() {
       if (pollTimer) clearInterval(pollTimer);
-      document.getElementById('loginModal').classList.remove('show');
+      document.getElementById('loginModal').classList.remove('active');
     }
 
     async function deleteAccount(uid) {
-      if (!confirm(`确定要移除账号 ${uid} 吗？`)) return;
+      if (!confirm('确定要移除账号 ' + uid + ' 吗？')) return;
       await fetch('/api/account/delete', {
         method: 'POST',
-        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid })
+        headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ uid: uid })
       });
       loadStatus();
     }
@@ -472,14 +1610,104 @@
     async function reviveAccount(uid) {
       await fetch('/api/account/revive', {
         method: 'POST',
-        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid })
+        headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ uid: uid })
       });
       loadStatus();
     }
 
-    saveKeyAndRefresh();
-    loadModels();
+    
+    async function triggerTask(type, btn) {
+      const oldText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = '正在执行中...';
+      try {
+        const res = await fetch('/api/schedule/' + type, {
+          method: 'POST',
+          headers: getHeaders()
+        });
+        const data = await res.json();
+        alert('✅ ' + (data.msg || '执行已触发！'));
+        setTimeout(loadStatus, 1500);
+      } catch (e) {
+        alert('❌ 触发失败: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = oldText;
+      }
+    }
+
+    
+    async function toggleAccount(uid, disable) {
+      try {
+        const res = await fetch('/api/account/toggle', {
+          method: 'POST',
+          headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ uid: uid, disable: disable })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadStatus();
+        } else {
+          alert('操作失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    async function saveGatewaySettings() {
+      const realmPref = document.getElementById('setRealmPref').value;
+      const maxInFlight = parseInt(document.getElementById('setMaxInFlight').value) || 3;
+      const apiKey = document.getElementById('setAPIKey').value.trim();
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            realm_pref: realmPref,
+            max_in_flight: maxInFlight,
+            api_key: apiKey
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (apiKey) {
+            localStorage.setItem('wb2a_key', apiKey);
+            keyInput.value = apiKey;
+          }
+          alert('✅ ' + data.msg);
+          loadGateway();
+          loadStatus();
+        } else {
+          alert('保存失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+
+    async function toggleNurture(uid, disable) {
+      try {
+        const res = await fetch('/api/account/toggle', {
+          method: 'POST',
+          headers: Object.assign({}, getHeaders(), { 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ uid: uid, disable: disable })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadStatus();
+        } else {
+          alert('操作失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+saveKeyAndRefresh();
     setInterval(() => { loadStatus(); loadMetrics(); }, 3000);
   </script>
 </body>

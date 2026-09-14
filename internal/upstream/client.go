@@ -632,7 +632,8 @@ func (c *Client) FetchModels(a *auth.Auth) ([]ModelInfo, error) {
 // （2026-09-12 提取），探测只保留 console 路径实际可用的。
 // 大小写敏感（GPT-5 大写不认）；console 要求首条 system。
 var globalProbeModels = []string{
-	// OpenAI 系
+	// OpenAI 旗舰
+	"gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5",
 	"gpt-5.4", "gpt-5.3-codex", "gpt-5", "gpt-5-mini", "gpt-5-nano",
 	"gpt-4.1", "gpt-4o", "gpt-4o-mini", "o1", "o3", "o3-mini",
 	// Gemini 系（探测按 code 判定：11102=无此模型跳过，通/11133/11128=可用保留）

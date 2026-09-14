@@ -25,7 +25,11 @@ func (p *Pool) PickExcluding(tried map[string]bool) *auth.Auth {
 // 账号」进行模型豁免——请求模型与其 trigger 模型不同时视为可用（issue #31）。
 // reqModel 为空时即普通 PickExcluding（不影响既有调用语义）。
 func (p *Pool) PickExcludingForModel(tried map[string]bool, reqModel string) *auth.Auth {
-	return p.pick(tried, reqModel)
+	return p.pick(tried, reqModel, "")
+}
+
+func (p *Pool) PickForModelAndRealm(tried map[string]bool, reqModel, reqRealm string) *auth.Auth {
+	return p.pick(tried, reqModel, reqRealm)
 }
 
 // pick 在 healthy 候选集中按三因子权重加权随机选出账号，并记录 lastUsed（防并发撞号）。
@@ -37,7 +41,7 @@ func (p *Pool) PickExcludingForModel(tried map[string]bool, reqModel string) *au
 // reqModel 非空时把健康口径换成 healthyForModel（6004 模型豁免生效；PickExcluding 传 ""）。
 // 注意：模型豁免只进 normal 选号（候选 healthy 判定）；全冷却兜底不参与模型豁免——
 // 兜底本来就是在"无任何 direct 可用"时的降级，切模型可用性已在 normal 阶段体现。
-func (p *Pool) pick(tried map[string]bool, reqModel string) *auth.Auth {
+func (p *Pool) pick(tried map[string]bool, reqModel, reqRealm string) *auth.Auth {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := time.Now()
@@ -54,7 +58,14 @@ func (p *Pool) pick(tried map[string]bool, reqModel string) *auth.Auth {
 			continue
 		}
 		if p.inFlightFull(e) {
-			continue // 在途占满：跳过（max=0 不限时不触发）
+			continue
+		}
+		// 域隔离：专属模型绝不发往异域账号
+		if reqRealm == "global" && (e.a == nil || !e.a.IsGlobal()) {
+			continue
+		}
+		if reqRealm == "cn" && (e.a != nil && e.a.IsGlobal()) {
+			continue
 		}
 		cands = append(cands, e)
 	}
@@ -211,6 +222,24 @@ func (p *Pool) pickWeighted(cands []*entry) *entry {
 
 // weightOf 计算单个账号的三因子权重。
 func (p *Pool) weightOf(e *entry, maxCredits int64, now time.Time) float64 {
+	switch p.realmPref {
+	case "cn_first":
+		if e.a != nil && e.a.Realm() == "cn" {
+			return 10000.0 + float64(e.credits)
+		}
+	case "global_first":
+		if e.a != nil && e.a.Realm() == "global" {
+			return 10000.0 + float64(e.credits)
+		}
+	case "round_robin":
+		w := 1.0
+		if e.lastUsed.IsZero() {
+			w += 1000.0
+		} else {
+			w += now.Sub(e.lastUsed).Minutes() * 10
+		}
+		return w
+	}
 	w := 1.0
 	// 1. credits 比例 ×10（会计入 mid-credit 锚点，避免全员 0 时 credits 项为 0）。
 	if maxCredits > 0 {

@@ -29,6 +29,7 @@ type Pool struct {
 	idleWeightMax     float64
 	// maxInFlight 单账号最大在途请求数；0 = 不限（租约关闭）。
 	maxInFlight int
+	realmPref   string // balanced | cn_first | global_first | round_robin
 	// randInt64N 仅供测试注入确定性随机源；nil 时用 math/rand/v2 全局源。
 	// 生产代码不应设置此字段。
 	randInt64N func(n int64) int64
@@ -203,3 +204,24 @@ func (p *Pool) upsertLocked(a *auth.Auth) {
 }
 
 // Pick 返回 healthy 中积分最高的账号；无可用返回 nil。
+
+func (p *Pool) SetRealmPreference(pref string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.realmPref = pref
+}
+
+func (p *Pool) RealmPreference() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.realmPref == "" {
+		return "balanced"
+	}
+	return p.realmPref
+}
+
+func (p *Pool) MaxInFlight() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.maxInFlight
+}

@@ -38,7 +38,8 @@ type Status struct {
 	Reason          string    `json:"reason,omitempty"`
 	SoftStreak      int       `json:"soft_streak,omitempty"` // 连续软冷却次数（指数退避指数，见 entry.softStreak）
 	Disabled        bool      `json:"disabled"`
-	DisabledReason  string    `json:"disabled_reason,omitempty"` // 仅 disabled 账号：禁用原因（运维可见）
+	DisabledReason  string    `json:"disabled_reason,omitempty"`
+	Paused          bool      `json:"paused"` // 仅 disabled 账号：禁用原因（运维可见）
 	SuccessCount    int64     `json:"success_count,omitempty"`
 	ErrTotal        int64     `json:"err_total,omitempty"`
 	LastSuccessTime time.Time `json:"last_success,omitempty"`
@@ -58,6 +59,7 @@ type entry struct {
 	coolKind     CoolKind
 	until        time.Time // 冷却截止（即时冷却：CoolSoft 429 / CoolHard 余额耗尽）
 	disabled     bool
+	paused       bool
 	reason       string
 	lastUsed     time.Time // 最近被选中时刻（防并发撞号）
 	// breakerUntil / fails / retryCount 为熔断器运行态（不持久化）。
@@ -86,7 +88,7 @@ type entry struct {
 
 // healthy 报告账号当前是否可选（未禁用、未处于任一冷却/熔断期）。
 func (e *entry) healthy(now time.Time) bool {
-	if e.disabled {
+	if e.disabled || e.paused {
 		return false
 	}
 	if !e.until.IsZero() && now.Before(e.until) {
@@ -103,6 +105,7 @@ func (e *entry) healthy(now time.Time) bool {
 // （softRateModel != reqModel）时，跳过冷却判定——该模型限流不代表账号在其他
 // 模型下不可用（issue #31）。空 reqModel / 未记录模型 / 同模型 → 与 healthy 一致。
 func (e *entry) healthyForModel(now time.Time, reqModel string) bool {
+	if e.paused { return false }
 	if !e.healthy(now) && reqModel != "" && e.softRateModel != "" &&
 		e.coolKind == CoolSoft && e.softRateModel != reqModel {
 		// 非 healthy 但属于可豁免场景：仍受 disabled/breakerUntil 约束。

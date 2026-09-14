@@ -250,6 +250,7 @@ func (p *Pool) statusOf(uid string, e *entry) Status {
 		Cooling:         now.Before(e.until) || now.Before(e.breakerUntil),
 		Reason:          e.reason,
 		Disabled:        e.disabled,
+		Paused:          e.paused,
 		SuccessCount:    e.successCount,
 		ErrTotal:        e.errTotal,
 		LastSuccessTime: e.lastSuccess,
@@ -278,3 +279,21 @@ func (p *Pool) statusOf(uid string, e *entry) Status {
 // ---------------------------------------------------------------------------
 // 持久化
 // ---------------------------------------------------------------------------
+
+func (p *Pool) Pause(uid string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if e, ok := p.byUID[uid]; ok {
+		e.paused = true
+		p.dirty.Store(true)
+	}
+}
+
+func (p *Pool) Resume(uid string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if e, ok := p.byUID[uid]; ok {
+		e.paused = false
+		p.dirty.Store(true)
+	}
+}

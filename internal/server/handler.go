@@ -41,6 +41,12 @@ type Config struct {
 	PromptMode string
 	// PromptText custom 模式下注入的系统提示词文本（来自 config.PromptText）。
 	PromptText string
+
+	// 定时排程任务手动触发钩子（由 main 注入 scheduler 方法）
+	RunCheckin   func()
+	RunTravel    func()
+	RunActivity  func()
+	RunKeepalive func()
 }
 
 // notFoundCooldown 上游 404 的固定短冷却时长。
@@ -187,65 +193,7 @@ func (h *Handler) models(w http.ResponseWriter, r *http.Request) {
 
 // modelList 动态获取模型列表并包装成 OpenAI 格式（含 context_length）。
 func (h *Handler) modelList() []map[string]any {
-	var list []map[string]any
-	if infos := h.fetchDynamicModels(); len(infos) > 0 {
-		out := make([]map[string]any, 0, len(infos))
-		for _, mi := range infos {
-			entry := map[string]any{
-				"id":                mi.ID,
-				"object":            "model",
-				"created":           1753600000,
-				"owned_by":          "workbuddy",
-				"context_length":    mi.ContextWindow,
-				"max_output_tokens": mi.MaxTokens,
-			}
-			if mi.ContextWindow == 0 {
-				entry["context_length"] = 131072
-			}
-			out = append(out, entry)
-		}
-		list = out
-	} else {
-		list = staticModels
-	}
-	return enrichModelList(list)
-}
-
-// fetchDynamicModels 从池中任一健康账号拉模型列表（含 contextWindow/maxTokens），缓存 1h。
-// 拉取失败记录时间戳进入 5min 负缓存，冷却期内直接用静态表，避免反复打上游。
-func (h *Handler) fetchDynamicModels() []upstream.ModelInfo {
-	dynamicModelsCache.RLock()
-	if len(dynamicModelsCache.ids) > 0 && time.Since(dynamicModelsCache.fetched) < dynamicModelsTTL {
-		out := dynamicModelsCache.ids
-		dynamicModelsCache.RUnlock()
-		return out
-	}
-	// 失败负缓存：冷却期内不再请求上游。
-	if !dynamicModelsCache.lastFail.IsZero() && time.Since(dynamicModelsCache.lastFail) < modelsFetchFailCooldown {
-		dynamicModelsCache.RUnlock()
-		return nil
-	}
-	dynamicModelsCache.RUnlock()
-
-	acct := h.cfg.Pool.Pick()
-	if acct == nil {
-		return nil
-	}
-	infos, err := h.cfg.Upstream.FetchModels(acct)
-	if err != nil || len(infos) == 0 {
-		// 拉取失败惩罚该账号，避免下次 Pick 又选中同一个反复失败；lastFail 保持全局负缓存。
-		h.cfg.Pool.NoteError(acct.UID)
-		dynamicModelsCache.Lock()
-		dynamicModelsCache.lastFail = time.Now()
-		dynamicModelsCache.Unlock()
-		return nil
-	}
-	dynamicModelsCache.Lock()
-	dynamicModelsCache.ids = infos
-	dynamicModelsCache.fetched = time.Now()
-	dynamicModelsCache.lastFail = time.Time{} // 成功则清空负缓存
-	dynamicModelsCache.Unlock()
-	return infos
+	return AllDistinctModelsList()
 }
 
 func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
@@ -343,7 +291,9 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		if acct == nil {
 			// 模型感知选号：请求携带 model 时启用 6004 模型级冷却豁免
 			// （PickExcludingForModel 内部当 model 为空时即退化为 PickExcluding）。
-			acct = h.cfg.Pool.PickExcludingForModel(tried, peek.Model)
+			cleanModel := strings.TrimPrefix(strings.TrimPrefix(peek.Model, "cn/"), "global/")
+			reqRealm := ModelRealmDetermined(peek.Model)
+			acct = h.cfg.Pool.PickForModelAndRealm(tried, cleanModel, reqRealm)
 		}
 		if acct == nil {
 			st.status = http.StatusServiceUnavailable
@@ -382,7 +332,12 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		rc, status, respBody, terr := h.cfg.Upstream.ChatStream(acct, body)
+		outBody := body
+		if cleanModel != peek.Model {
+			outBody = bytes.Replace(body, []byte(`"model":"`+peek.Model+`"`), []byte(`"model":"`+cleanModel+`"`), 1)
+			outBody = bytes.Replace(outBody, []byte(`"model": "`+peek.Model+`"`), []byte(`"model": "`+cleanModel+`"`), 1)
+		}
+		rc, status, respBody, terr := h.cfg.Upstream.ChatStream(acct, outBody)
 		if terr != nil {
 			// 网络层抖动：只换号，不喂熔断计数（传输层错误对连续失败连坐熔断过于严苛）。
 			// 上游 client 已打 transport error 日志。
@@ -444,8 +399,13 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg := "all accounts unavailable (cooling/disabled)"
+	reqRealm := ModelRealm(peek.Model)
 	if lastErr != nil {
 		msg += ": " + lastErr.Error()
+	} else if reqRealm == "global" {
+		msg = fmt.Sprintf("模型 %s 为国际版特有模型，当前无可用的国际版账号（可能未配置或处于冷却中）", peek.Model)
+	} else if reqRealm == "cn" {
+		msg = fmt.Sprintf("模型 %s 为国内版特有模型，当前无可用的国内版账号（可能未配置或处于冷却中）", peek.Model)
 	}
 	writeOpenAIError(w, http.StatusServiceUnavailable, "no_healthy_account", msg)
 	st.status = http.StatusServiceUnavailable
