@@ -358,7 +358,7 @@ func ModelRealmDetermined(modelID string) string {
 		return "any" // 两边都有的同名模型，按配置轮转
 	}
 
-	// 兜底推断规则
+// 兜底推断规则
 	m := strings.ToLower(raw)
 	if strings.HasPrefix(m, "gpt-") || strings.HasPrefix(m, "o1") || strings.HasPrefix(m, "o3") || strings.HasPrefix(m, "gemini-") {
 		return "global"
@@ -366,134 +366,67 @@ func ModelRealmDetermined(modelID string) string {
 	return "cn"
 }
 
-// AllDistinctModelsList 返回独立不合并的模型列表（包含纯净名与 cn/、global/ 显式前缀选项）
+// AllDistinctModelsList 返回独立区分的国内外全量模型列表：
+// 1. 国内版全部附加 cn/ 前缀（如 cn/deepseek-v4.1-flash, cn/glm-5.3）
+// 2. 国际版全部附加 global/ 前缀（如 global/deepseek-v4.1-flash, global/gpt-6-astra）
+// 即使同名也完全独立宣告，不带倍率显示，描述中不含任何强制字样。
 func AllDistinctModelsList() []map[string]any {
-	out := make([]map[string]any, 0, len(cnCatalog)+len(globalCatalog)+10)
-	seen := make(map[string]bool)
+	out := make([]map[string]any, 0, len(cnCatalog)+len(globalCatalog))
 
-	// 1. 国内版独立列表
+	// 1. 国内版模型库 (全部带 cn/ 前缀)
 	for _, meta := range cnCatalog {
-		// 纯净模型名
-		if !seen[meta.ID] {
-			seen[meta.ID] = true
-			out = append(out, map[string]any{
-				"id":                 meta.ID,
-				"name":               meta.Name,
-				"object":             "model",
-				"created":            1753600000,
-				"owned_by":           "workbuddy-cn",
-				"realm":              "cn",
-				"realm_label":        "国内版",
-				"context_length":     meta.ContextLength,
-				"max_input_tokens":   meta.MaxInputTokens,
-				"max_output_tokens":  meta.MaxOutputTokens,
-				"max_tokens":         meta.MaxOutputTokens,
-				"description":        meta.Description,
-				"credits":            meta.Credits,
-				"supports_vision":    meta.SupportsImages,
-				"supports_images":    meta.SupportsImages,
-				"supports_tools":     meta.SupportsTools,
-				"supports_reasoning": meta.SupportsReasoning,
-				"reasoning_efforts":  meta.ReasoningEfforts,
-				"capabilities": map[string]bool{
-					"vision":    meta.SupportsImages,
-					"tools":     meta.SupportsTools,
-					"reasoning": meta.SupportsReasoning,
-				},
-			})
-		}
-		// 显式 cn/ 前缀选项
-		cnPrefixedID := "cn/" + meta.ID
-		if !seen[cnPrefixedID] {
-			seen[cnPrefixedID] = true
-			out = append(out, map[string]any{
-				"id":                 cnPrefixedID,
-				"name":               "[国内] " + meta.Name,
-				"object":             "model",
-				"created":            1753600000,
-				"owned_by":           "workbuddy-cn",
-				"realm":              "cn",
-				"realm_label":        "国内版",
-				"context_length":     meta.ContextLength,
-				"max_input_tokens":   meta.MaxInputTokens,
-				"max_output_tokens":  meta.MaxOutputTokens,
-				"max_tokens":         meta.MaxOutputTokens,
-				"description":        "【强制国内版】" + meta.Description,
-				"credits":            meta.Credits,
-				"supports_vision":    meta.SupportsImages,
-				"supports_images":    meta.SupportsImages,
-				"supports_tools":     meta.SupportsTools,
-				"supports_reasoning": meta.SupportsReasoning,
-				"reasoning_efforts":  meta.ReasoningEfforts,
-				"capabilities": map[string]bool{
-					"vision":    meta.SupportsImages,
-					"tools":     meta.SupportsTools,
-					"reasoning": meta.SupportsReasoning,
-				},
-			})
-		}
+		out = append(out, map[string]any{
+			"id":                 "cn/" + meta.ID,
+			"name":               "[国内] " + meta.Name,
+			"object":             "model",
+			"created":            1753600000,
+			"owned_by":           "workbuddy-cn",
+			"realm":              "cn",
+			"realm_label":        "国内版",
+			"context_length":     meta.ContextLength,
+			"max_input_tokens":   meta.MaxInputTokens,
+			"max_output_tokens":  meta.MaxOutputTokens,
+			"max_tokens":         meta.MaxOutputTokens,
+			"description":        meta.Description,
+			"supports_vision":    meta.SupportsImages,
+			"supports_images":    meta.SupportsImages,
+			"supports_tools":     meta.SupportsTools,
+			"supports_reasoning": meta.SupportsReasoning,
+			"reasoning_efforts":  meta.ReasoningEfforts,
+			"capabilities": map[string]bool{
+				"vision":    meta.SupportsImages,
+				"tools":     meta.SupportsTools,
+				"reasoning": meta.SupportsReasoning,
+			},
+		})
 	}
 
-	// 2. 国际版独立列表
+	// 2. 国际版模型库 (全部带 global/ 前缀)
 	for _, meta := range globalCatalog {
-		if !seen[meta.ID] {
-			seen[meta.ID] = true
-			out = append(out, map[string]any{
-				"id":                 meta.ID,
-				"name":               meta.Name,
-				"object":             "model",
-				"created":            1753600000,
-				"owned_by":           "workbuddy-global",
-				"realm":              "global",
-				"realm_label":        "国际版",
-				"context_length":     meta.ContextLength,
-				"max_input_tokens":   meta.MaxInputTokens,
-				"max_output_tokens":  meta.MaxOutputTokens,
-				"max_tokens":         meta.MaxOutputTokens,
-				"description":        meta.Description,
-				"credits":            meta.Credits,
-				"supports_vision":    meta.SupportsImages,
-				"supports_images":    meta.SupportsImages,
-				"supports_tools":     meta.SupportsTools,
-				"supports_reasoning": meta.SupportsReasoning,
-				"reasoning_efforts":  meta.ReasoningEfforts,
-				"capabilities": map[string]bool{
-					"vision":    meta.SupportsImages,
-					"tools":     meta.SupportsTools,
-					"reasoning": meta.SupportsReasoning,
-				},
-			})
-		}
-		// 显式 global/ 前缀选项
-		globalPrefixedID := "global/" + meta.ID
-		if !seen[globalPrefixedID] {
-			seen[globalPrefixedID] = true
-			out = append(out, map[string]any{
-				"id":                 globalPrefixedID,
-				"name":               "[国际] " + meta.Name,
-				"object":             "model",
-				"created":            1753600000,
-				"owned_by":           "workbuddy-global",
-				"realm":              "global",
-				"realm_label":        "国际版",
-				"context_length":     meta.ContextLength,
-				"max_input_tokens":   meta.MaxInputTokens,
-				"max_output_tokens":  meta.MaxOutputTokens,
-				"max_tokens":         meta.MaxOutputTokens,
-				"description":        "【强制国际版】" + meta.Description,
-				"credits":            meta.Credits,
-				"supports_vision":    meta.SupportsImages,
-				"supports_images":    meta.SupportsImages,
-				"supports_tools":     meta.SupportsTools,
-				"supports_reasoning": meta.SupportsReasoning,
-				"reasoning_efforts":  meta.ReasoningEfforts,
-				"capabilities": map[string]bool{
-					"vision":    meta.SupportsImages,
-					"tools":     meta.SupportsTools,
-					"reasoning": meta.SupportsReasoning,
-				},
-			})
-		}
+		out = append(out, map[string]any{
+			"id":                 "global/" + meta.ID,
+			"name":               "[国际] " + meta.Name,
+			"object":             "model",
+			"created":            1753600000,
+			"owned_by":           "workbuddy-global",
+			"realm":              "global",
+			"realm_label":        "国际版",
+			"context_length":     meta.ContextLength,
+			"max_input_tokens":   meta.MaxInputTokens,
+			"max_output_tokens":  meta.MaxOutputTokens,
+			"max_tokens":         meta.MaxOutputTokens,
+			"description":        meta.Description,
+			"supports_vision":    meta.SupportsImages,
+			"supports_images":    meta.SupportsImages,
+			"supports_tools":     meta.SupportsTools,
+			"supports_reasoning": meta.SupportsReasoning,
+			"reasoning_efforts":  meta.ReasoningEfforts,
+			"capabilities": map[string]bool{
+				"vision":    meta.SupportsImages,
+				"tools":     meta.SupportsTools,
+				"reasoning": meta.SupportsReasoning,
+			},
+		})
 	}
 
 	return out

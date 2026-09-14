@@ -1394,9 +1394,9 @@
         const cnGroup = cachedModelList.filter(m => m.realm === 'cn');
         const globalGroup = cachedModelList.filter(m => m.realm === 'global');
 
-        let ddHTML = '<optgroup label="🇨🇳 国内版可用模型">';
+        let ddHTML = '<optgroup label="1、🇨🇳 国内版可用模型 (cn/ 前缀)">';
         ddHTML += cnGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
-        ddHTML += '</optgroup><optgroup label="🌍 国际版可用模型">';
+        ddHTML += '</optgroup><optgroup label="2、🌐 国际版可用模型 (global/ 前缀)">';
         ddHTML += globalGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
         ddHTML += '</optgroup>';
         select.innerHTML = ddHTML;
@@ -1414,6 +1414,35 @@
 
     function filterModelCards() {
       renderModelCards();
+    }
+
+    function createModelCardHTML(m) {
+      let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M 上下文' : Math.round(m.context_length/1024)+'k 上下文') : '128k 上下文';
+      let caps = [];
+      if (m.supports_vision) caps.push('<span class="cap-badge-mini">👁️ 视觉</span>');
+      if (m.supports_tools) caps.push('<span class="cap-badge-mini">🛠️ 工具</span>');
+      if (m.supports_reasoning) {
+        let effStr = m.reasoning_efforts ? m.reasoning_efforts.join('/') : '支持';
+        caps.push('<span class="cap-badge-mini cap-badge-effort">🧠 思考: ' + effStr + '</span>');
+      }
+      let isCN = m.realm === 'cn' || (m.id && m.id.startsWith('cn/'));
+      let realmBadge = isCN
+        ? '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">🇨🇳 国内版</span>'
+        : '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">🌐 国际版</span>';
+
+      return '<div class="model-item-card" data-model="' + m.id + '" onclick="selectModelForPlayground(this.dataset.model)">' +
+        '<div class="model-card-top">' +
+          '<div style="display: flex; align-items: center; gap: 8px;">' +
+            '<span class="model-id-title">' + m.id + '</span>' +
+            realmBadge +
+          '</div>' +
+          '<span class="badge badge-context-pill">' + ctx + '</span>' +
+        '</div>' +
+        '<div class="model-desc-text">' + (m.description || '官方兼容模型，支持标准流式与工具调用。') + '</div>' +
+        '<div class="model-caps-row">' +
+          '<div class="caps-group">' + caps.join('') + '</div>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderModelCards() {
@@ -1437,39 +1466,37 @@
         return;
       }
 
-      grid.innerHTML = filtered.map(m => {
-        let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M 上下文' : Math.round(m.context_length/1024)+'k 上下文') : '128k 上下文';
-        let caps = [];
-        if (m.supports_vision) caps.push('<span class="cap-badge-mini">👁️ 视觉</span>');
-        if (m.supports_tools) caps.push('<span class="cap-badge-mini">🛠️ 工具</span>');
-        if (m.supports_reasoning) {
-          let effStr = m.reasoning_efforts ? m.reasoning_efforts.join('/') : '支持';
-          caps.push('<span class="cap-badge-mini cap-badge-effort">🧠 思考: ' + effStr + '</span>');
-        }
-        let creditsBadge = m.credits ? ('<span class="credits-text">' + m.credits + '</span>') : '';
-          let realmBadge = '';
-          if (m.realm === 'both') {
-            realmBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">🌐 双域通用</span>';
-          } else if (m.realm === 'global') {
-            realmBadge = '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">🌍 仅国际版</span>';
-          } else if (m.realm === 'cn') {
-            realmBadge = '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">🇨🇳 仅国内版</span>';
-          }
-          return '<div class="model-item-card" data-model="' + m.id + '" onclick="selectModelForPlayground(this.dataset.model)">' +
-            '<div class="model-card-top">' +
-              '<div style="display: flex; align-items: center; gap: 8px;">' +
-                '<span class="model-id-title">' + m.id + '</span>' +
-                realmBadge +
-              '</div>' +
-              '<span class="badge badge-context-pill">' + ctx + '</span>' +
+      const cnList = filtered.filter(m => m.realm === 'cn' || (m.id && m.id.startsWith('cn/')));
+      const globalList = filtered.filter(m => m.realm === 'global' || (m.id && m.id.startsWith('global/')));
+
+      let sectionsHTML = '';
+      if (cnList.length > 0) {
+        sectionsHTML += '<div style="grid-column: 1/-1; margin-top: 6px; margin-bottom: 4px;">' +
+          '<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(14, 165, 233, 0.25);">' +
+            '<div style="display: flex; align-items: center; gap: 8px;">' +
+              '<span style="font-size: 15px; font-weight: 700; color: #38bdf8;">1、🇨🇳 国内版模型库 (CN)</span>' +
+              '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">' + cnList.length + ' 个模型</span>' +
             '</div>' +
-          '<div class="model-desc-text">' + (m.description || '官方兼容模型，支持标准流式与工具调用。') + '</div>' +
-          '<div class="model-caps-row">' +
-            '<div class="caps-group">' + caps.join('') + '</div>' +
-            creditsBadge +
+            '<span style="font-size: 12px; color: var(--text-dim);">统一使用 <code style="color: #38bdf8; font-weight: 600;">cn/</code> 前缀</span>' +
           '</div>' +
         '</div>';
-      }).join('');
+        sectionsHTML += cnList.map(createModelCardHTML).join('');
+      }
+
+      if (globalList.length > 0) {
+        sectionsHTML += '<div style="grid-column: 1/-1; margin-top: 18px; margin-bottom: 4px;">' +
+          '<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(168, 85, 247, 0.25);">' +
+            '<div style="display: flex; align-items: center; gap: 8px;">' +
+              '<span style="font-size: 15px; font-weight: 700; color: #c084fc;">2、🌐 国际版模型库 (Global)</span>' +
+              '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">' + globalList.length + ' 个模型</span>' +
+            '</div>' +
+            '<span style="font-size: 12px; color: var(--text-dim);">统一使用 <code style="color: #c084fc; font-weight: 600;">global/</code> 前缀</span>' +
+          '</div>' +
+        '</div>';
+        sectionsHTML += globalList.map(createModelCardHTML).join('');
+      }
+
+      grid.innerHTML = sectionsHTML;
     }
 
     function selectModelForPlayground(id) {
