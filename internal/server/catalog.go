@@ -144,14 +144,14 @@ var cnCatalog = map[string]ModelCatalogEntry{
 		Description: "适合复杂编码任务", Credits: "x0.54",
 		MaxInputTokens: 256000, MaxOutputTokens: 32000, ContextLength: 256000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"medium"},
 	},
 	"minimax-m3": {
 		ID: "minimax-m3", Name: "MiniMax-M3", Realm: "cn", RealmLabel: "国内版",
 		Description: "原生多模态，擅长代码、智能体任务", Credits: "0.25x",
 		MaxInputTokens: 512000, MaxOutputTokens: 128000, ContextLength: 512000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"medium"},
 	},
 	"minimax-m2.7": {
 		ID: "minimax-m2.7", Name: "MiniMax-M2.7", Realm: "cn", RealmLabel: "国内版",
@@ -179,7 +179,7 @@ var cnCatalog = map[string]ModelCatalogEntry{
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口，原生多模态", Credits: "0.03x (独家优惠)",
 		MaxInputTokens: 1000000, MaxOutputTokens: 128000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"high"},
 	},
 	"deepseek-v4-pro": {
 		ID: "deepseek-v4-pro", Name: "Deepseek-V4-Pro", Realm: "cn", RealmLabel: "国内版",
@@ -232,7 +232,7 @@ var globalCatalog = map[string]ModelCatalogEntry{
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口，原生多模态", Credits: "x0.00",
 		MaxInputTokens: 1000000, MaxOutputTokens: 128000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"high"},
 	},
 	"gpt-6-astra": {
 		ID: "gpt-6-astra", Name: "GPT-6-Astra", Realm: "global", RealmLabel: "国际版",
@@ -295,14 +295,14 @@ var globalCatalog = map[string]ModelCatalogEntry{
 		Description: "OpenAI 代码专用模型，非常擅长处理复杂的编码任务", Credits: "x1.25",
 		MaxInputTokens: 272000, MaxOutputTokens: 72000, ContextLength: 272000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"medium"},
 	},
 	"gemini-3.5-flash": {
 		ID: "gemini-3.5-flash", Name: "Gemini-3.5-Flash", Realm: "global", RealmLabel: "国际版",
 		Description: "能力均衡，适合日常使用", Credits: "x0.99",
 		MaxInputTokens: 1000000, MaxOutputTokens: 65536, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"low", "high", "max"},
 	},
 	"glm-5.3": {
 		ID: "glm-5.3", Name: "GLM-5.3", Realm: "global", RealmLabel: "国际版",
@@ -323,14 +323,14 @@ var globalCatalog = map[string]ModelCatalogEntry{
 		Description: "擅长处理复杂的长程自主任务，前端开发能力突出，同时在知识工作与科研推理上表现出色。", Credits: "x1.62",
 		MaxInputTokens: 1000000, MaxOutputTokens: 32000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"low", "high", "xhigh"},
 	},
 	"kimi-k2.6": {
 		ID: "kimi-k2.6", Name: "Kimi-K2.6", Realm: "global", RealmLabel: "国际版",
 		Description: "多模态模型，适合日常任务", Credits: "x0.52",
 		MaxInputTokens: 256000, MaxOutputTokens: 32000, ContextLength: 256000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: nil,
+		ReasoningEfforts: []string{"medium"},
 	},
 }
 
