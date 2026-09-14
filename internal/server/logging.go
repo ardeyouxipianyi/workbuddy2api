@@ -23,6 +23,7 @@ var chatLogEnabled = true
 type chatStat struct {
 	start  time.Time
 	model  string
+	effort string
 	mode   string // "stream" | "sync"
 	uid    string // 完整 uid，展示时只取前 8 位
 	ttfb   time.Duration

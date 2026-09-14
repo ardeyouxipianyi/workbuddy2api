@@ -405,7 +405,6 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg := "all accounts unavailable (cooling/disabled)"
-	reqRealm := ModelRealm(peek.Model)
 	if lastErr != nil {
 		msg += ": " + lastErr.Error()
 	} else if reqRealm == "global" {
