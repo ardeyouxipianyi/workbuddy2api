@@ -172,21 +172,21 @@ var cnCatalog = map[string]ModelCatalogEntry{
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口", Credits: "x0.17",
 		MaxInputTokens: 1000000, MaxOutputTokens: 50000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: []string{"high", "xhigh"},
+		ReasoningEfforts: []string{"low", "medium", "high", "xhigh"},
 	},
 	"deepseek-v4.1-flash": {
 		ID: "deepseek-v4.1-flash", Name: "Deepseek-V4.1-Flash", Realm: "cn", RealmLabel: "国内版",
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口，原生多模态", Credits: "0.03x (独家优惠)",
 		MaxInputTokens: 1000000, MaxOutputTokens: 128000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: []string{"high"},
+		ReasoningEfforts: []string{"low", "medium", "high", "xhigh", "max"},
 	},
 	"deepseek-v4-pro": {
 		ID: "deepseek-v4-pro", Name: "Deepseek-V4-Pro", Realm: "cn", RealmLabel: "国内版",
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口", Credits: "x0.51",
 		MaxInputTokens: 1000000, MaxOutputTokens: 50000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: []string{"high", "xhigh"},
+		ReasoningEfforts: []string{"low", "medium", "high", "xhigh", "max"},
 	},
 	"deepseek-v3-1": {
 		ID: "deepseek-v3-1", Name: "DeepSeek-V3.1", Realm: "cn", RealmLabel: "国内版",
@@ -232,7 +232,7 @@ var globalCatalog = map[string]ModelCatalogEntry{
 		Description: "DeepSeek 旗舰模型，支持 1M 上下文窗口，原生多模态", Credits: "x0.00",
 		MaxInputTokens: 1000000, MaxOutputTokens: 128000, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: []string{"high"},
+		ReasoningEfforts: []string{"low", "medium", "high", "xhigh", "max"},
 	},
 	"gpt-6-astra": {
 		ID: "gpt-6-astra", Name: "GPT-6-Astra", Realm: "global", RealmLabel: "国际版",
@@ -302,7 +302,7 @@ var globalCatalog = map[string]ModelCatalogEntry{
 		Description: "能力均衡，适合日常使用", Credits: "x0.99",
 		MaxInputTokens: 1000000, MaxOutputTokens: 65536, ContextLength: 1000000,
 		SupportsImages: true, SupportsTools: true, SupportsReasoning: true,
-		ReasoningEfforts: []string{"low", "high", "max"},
+		ReasoningEfforts: []string{"low", "medium", "high", "max"},
 	},
 	"glm-5.3": {
 		ID: "glm-5.3", Name: "GLM-5.3", Realm: "global", RealmLabel: "国际版",
