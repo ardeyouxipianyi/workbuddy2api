@@ -279,6 +279,9 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		degradedApplied = true
 	}
 
+	cleanModel := strings.TrimPrefix(strings.TrimPrefix(peek.Model, "cn/"), "global/")
+	reqRealm := ModelRealmDetermined(peek.Model)
+
 	for i := 0; i < h.cfg.MaxRotate; i++ {
 		// 选号：粘性号优先（PickByUID 已校验 health + 在途未满），否则普通轮换。
 		var acct *auth.Auth
@@ -292,8 +295,6 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		if acct == nil {
 			// 模型感知选号：请求携带 model 时启用 6004 模型级冷却豁免
 			// （PickExcludingForModel 内部当 model 为空时即退化为 PickExcluding）。
-			cleanModel := strings.TrimPrefix(strings.TrimPrefix(peek.Model, "cn/"), "global/")
-			reqRealm := ModelRealmDetermined(peek.Model)
 			acct = h.cfg.Pool.PickForModelAndRealm(tried, cleanModel, reqRealm)
 		}
 		if acct == nil {
