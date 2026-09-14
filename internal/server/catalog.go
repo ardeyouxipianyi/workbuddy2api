@@ -375,6 +375,7 @@ func AllDistinctModelsList() []map[string]any {
 
 	// 1. 国内版模型库 (全部带 cn/ 前缀)
 	for _, meta := range cnCatalog {
+		supportsReasoning := len(meta.ReasoningEfforts) > 0
 		out = append(out, map[string]any{
 			"id":                 "cn/" + meta.ID,
 			"name":               "[国内] " + meta.Name,
@@ -391,18 +392,19 @@ func AllDistinctModelsList() []map[string]any {
 			"supports_vision":    meta.SupportsImages,
 			"supports_images":    meta.SupportsImages,
 			"supports_tools":     meta.SupportsTools,
-			"supports_reasoning": meta.SupportsReasoning,
+			"supports_reasoning": supportsReasoning,
 			"reasoning_efforts":  meta.ReasoningEfforts,
 			"capabilities": map[string]bool{
 				"vision":    meta.SupportsImages,
 				"tools":     meta.SupportsTools,
-				"reasoning": meta.SupportsReasoning,
+				"reasoning": supportsReasoning,
 			},
 		})
 	}
 
 	// 2. 国际版模型库 (全部带 global/ 前缀)
 	for _, meta := range globalCatalog {
+		supportsReasoning := len(meta.ReasoningEfforts) > 0
 		out = append(out, map[string]any{
 			"id":                 "global/" + meta.ID,
 			"name":               "[国际] " + meta.Name,
@@ -419,12 +421,12 @@ func AllDistinctModelsList() []map[string]any {
 			"supports_vision":    meta.SupportsImages,
 			"supports_images":    meta.SupportsImages,
 			"supports_tools":     meta.SupportsTools,
-			"supports_reasoning": meta.SupportsReasoning,
+			"supports_reasoning": supportsReasoning,
 			"reasoning_efforts":  meta.ReasoningEfforts,
 			"capabilities": map[string]bool{
 				"vision":    meta.SupportsImages,
 				"tools":     meta.SupportsTools,
-				"reasoning": meta.SupportsReasoning,
+				"reasoning": supportsReasoning,
 			},
 		})
 	}

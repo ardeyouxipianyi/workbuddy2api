@@ -902,7 +902,6 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
               已探测模型资源库 (<span id="modelCount" style="color: var(--primary);">0</span>)
             </div>
             <div style="font-size: 12px; color: var(--text-muted);">点击任意卡片即可在 Playground 中快速选用</div>
@@ -911,11 +910,11 @@
             <input type="text" class="model-search-input" id="modelFilterInput" placeholder="🔍 搜索模型名称或特征..." oninput="filterModelCards()">
             <div class="model-filter-tags">
               <span class="filter-tag active" onclick="setQuickFilter('all', this)">全部模型</span>
-              <span class="filter-tag" onclick="setQuickFilter('cn', this)" style="border-color: rgba(14, 165, 233, 0.5); color: #38bdf8; font-weight: 600;">🇨🇳 国内版专属模型</span>
-              <span class="filter-tag" onclick="setQuickFilter('global', this)" style="border-color: rgba(168, 85, 247, 0.5); color: #c084fc; font-weight: 600;">🌍 国际版专属模型</span>
+              <span class="filter-tag" onclick="setQuickFilter('cn', this)" style="border-color: rgba(14, 165, 233, 0.5); color: #38bdf8; font-weight: 600;">国内版模型</span>
+              <span class="filter-tag" onclick="setQuickFilter('global', this)" style="border-color: rgba(168, 85, 247, 0.5); color: #c084fc; font-weight: 600;">国际版模型</span>
               <span class="filter-tag" onclick="setQuickFilter('1M', this)">1M 超长上下文</span>
-              <span class="filter-tag" onclick="setQuickFilter('reasoning', this)">🧠 深度思考</span>
-              <span class="filter-tag" onclick="setQuickFilter('vision', this)">👁️ 视觉多模态</span>
+              <span class="filter-tag" onclick="setQuickFilter('reasoning', this)">深度思考</span>
+              <span class="filter-tag" onclick="setQuickFilter('vision', this)">视觉多模态</span>
             </div>
           </div>
           <div class="models-grid-layout" id="modelsGrid"></div>
@@ -1394,10 +1393,10 @@
         const cnGroup = cachedModelList.filter(m => m.realm === 'cn');
         const globalGroup = cachedModelList.filter(m => m.realm === 'global');
 
-        let ddHTML = '<optgroup label="1、🇨🇳 国内版可用模型 (cn/ 前缀)">';
-        ddHTML += cnGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
-        ddHTML += '</optgroup><optgroup label="2、🌐 国际版可用模型 (global/ 前缀)">';
-        ddHTML += globalGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' 🧠' : '') + '</option>').join('');
+        let ddHTML = '<optgroup label="1、国内版模型库 (cn/ 前缀)">';
+        ddHTML += cnGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' [思考]' : '') + '</option>').join('');
+        ddHTML += '</optgroup><optgroup label="2、国际版模型库 (global/ 前缀)">';
+        ddHTML += globalGroup.map(m => '<option value="' + m.id + '">' + m.id + (m.supports_reasoning ? ' [思考]' : '') + '</option>').join('');
         ddHTML += '</optgroup>';
         select.innerHTML = ddHTML;
 
@@ -1419,16 +1418,15 @@
     function createModelCardHTML(m) {
       let ctx = m.context_length ? (m.context_length >= 1000000 ? '1M 上下文' : Math.round(m.context_length/1024)+'k 上下文') : '128k 上下文';
       let caps = [];
-      if (m.supports_vision) caps.push('<span class="cap-badge-mini">👁️ 视觉</span>');
-      if (m.supports_tools) caps.push('<span class="cap-badge-mini">🛠️ 工具</span>');
-      if (m.supports_reasoning) {
-        let effStr = m.reasoning_efforts ? m.reasoning_efforts.join('/') : '支持';
-        caps.push('<span class="cap-badge-mini cap-badge-effort">🧠 思考: ' + effStr + '</span>');
+      if (m.supports_vision) caps.push('<span class="cap-badge-mini">视觉</span>');
+      if (m.supports_tools) caps.push('<span class="cap-badge-mini">工具</span>');
+      if (m.supports_reasoning && m.reasoning_efforts && m.reasoning_efforts.length > 0) {
+        caps.push('<span class="cap-badge-mini cap-badge-effort">思考: ' + m.reasoning_efforts.join('/') + '</span>');
       }
       let isCN = m.realm === 'cn' || (m.id && m.id.startsWith('cn/'));
       let realmBadge = isCN
-        ? '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">🇨🇳 国内版</span>'
-        : '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">🌐 国际版</span>';
+        ? '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">国内版</span>'
+        : '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">国际版</span>';
 
       return '<div class="model-item-card" data-model="' + m.id + '" onclick="selectModelForPlayground(this.dataset.model)">' +
         '<div class="model-card-top">' +
@@ -1438,8 +1436,7 @@
           '</div>' +
           '<span class="badge badge-context-pill">' + ctx + '</span>' +
         '</div>' +
-        '<div class="model-desc-text">' + (m.description || '官方兼容模型，支持标准流式与工具调用。') + '</div>' +
-        '<div class="model-caps-row">' +
+        '<div class="model-caps-row" style="margin-top: 10px;">' +
           '<div class="caps-group">' + caps.join('') + '</div>' +
         '</div>' +
       '</div>';
@@ -1474,7 +1471,7 @@
         sectionsHTML += '<div style="grid-column: 1/-1; margin-top: 6px; margin-bottom: 4px;">' +
           '<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(14, 165, 233, 0.25);">' +
             '<div style="display: flex; align-items: center; gap: 8px;">' +
-              '<span style="font-size: 15px; font-weight: 700; color: #38bdf8;">1、🇨🇳 国内版模型库 (CN)</span>' +
+              '<span style="font-size: 15px; font-weight: 700; color: #38bdf8;">1、国内版模型库 (CN)</span>' +
               '<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3);">' + cnList.length + ' 个模型</span>' +
             '</div>' +
             '<span style="font-size: 12px; color: var(--text-dim);">统一使用 <code style="color: #38bdf8; font-weight: 600;">cn/</code> 前缀</span>' +
@@ -1487,7 +1484,7 @@
         sectionsHTML += '<div style="grid-column: 1/-1; margin-top: 18px; margin-bottom: 4px;">' +
           '<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(168, 85, 247, 0.25);">' +
             '<div style="display: flex; align-items: center; gap: 8px;">' +
-              '<span style="font-size: 15px; font-weight: 700; color: #c084fc;">2、🌐 国际版模型库 (Global)</span>' +
+              '<span style="font-size: 15px; font-weight: 700; color: #c084fc;">2、国际版模型库 (Global)</span>' +
               '<span class="badge" style="background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35);">' + globalList.length + ' 个模型</span>' +
             '</div>' +
             '<span style="font-size: 12px; color: var(--text-dim);">统一使用 <code style="color: #c084fc; font-weight: 600;">global/</code> 前缀</span>' +
