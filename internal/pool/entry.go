@@ -100,16 +100,23 @@ func (e *entry) healthy(now time.Time) bool {
 	return true
 }
 
+// modelExempt 报告账号是否处于「6004 模型级软冷却」形态：冷却由带解析时间的
+// 6004 触发（coolKind==CoolSoft 且 softRateModel 非空），且尚未禁用、未处于养号暂停、未熔断。
+// 此形态下账号仅对 softRateModel 不可用，对其他模型仍可选（issue #31）。
+// healthyForModel 与 ServableNow 共用本谓词，保证 chat 选号与探活口径一致。
+func (e *entry) modelExempt() bool {
+	return e.coolKind == CoolSoft && e.softRateModel != "" &&
+		!e.disabled && !e.paused && e.breakerUntil.IsZero()
+}
+
 // healthyForModel 报告账号对指定 model 是否可选（含模型级豁免）：
 // 冷却为由 6004 触发的**模型级**软冷却（softRateModel 非空）且请求模型不同
 // （softRateModel != reqModel）时，跳过冷却判定——该模型限流不代表账号在其他
 // 模型下不可用（issue #31）。空 reqModel / 未记录模型 / 同模型 → 与 healthy 一致。
 func (e *entry) healthyForModel(now time.Time, reqModel string) bool {
 	if e.paused { return false }
-	if !e.healthy(now) && reqModel != "" && e.softRateModel != "" &&
-		e.coolKind == CoolSoft && e.softRateModel != reqModel {
-		// 非 healthy 但属于可豁免场景：仍受 disabled/breakerUntil 约束。
-		return !e.disabled && e.breakerUntil.IsZero()
+	if !e.healthy(now) && reqModel != "" && e.modelExempt() && e.softRateModel != reqModel {
+		return true
 	}
 	return e.healthy(now)
 }

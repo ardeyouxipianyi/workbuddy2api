@@ -337,7 +337,11 @@ func (h *Handler) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			outBody = bytes.Replace(body, []byte(`"model":"`+peek.Model+`"`), []byte(`"model":"`+cleanModel+`"`), 1)
 			outBody = bytes.Replace(outBody, []byte(`"model": "`+peek.Model+`"`), []byte(`"model": "`+cleanModel+`"`), 1)
 		}
-		rc, status, respBody, terr := h.cfg.Upstream.ChatStream(acct, outBody)
+		var clientIP string
+		if h.cfg.Upstream.PassthroughIP {
+			clientIP = upstream.ExtractClientIP(r)
+		}
+		rc, status, respBody, terr := h.cfg.Upstream.ChatStream(acct, outBody, clientIP)
 		if terr != nil {
 			// 网络层抖动：只换号，不喂熔断计数（传输层错误对连续失败连坐熔断过于严苛）。
 			// 上游 client 已打 transport error 日志。

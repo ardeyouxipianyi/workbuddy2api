@@ -71,6 +71,14 @@ type Config struct {
 		// 桌面 UA 为 `WorkBuddy/<version>`。指纹净化考虑：默认值保持现状（可配而非改死），
 		// 仅当用户显式配置才改写。
 		UserAgent string `json:"user_agent"`
+		// ClientVersion 国内版 WorkBuddy 客户端版本覆盖（空 = 默认 5.5.6）。
+		ClientVersion string `json:"client_version"`
+		// CliVersion 国内版 CLI 版本覆盖（空 = 默认 2.137.1）。
+		CliVersion string `json:"cli_version"`
+		// GlobalClientVersion 国际版客户端版本覆盖（空 = 默认 5.5.2）。
+		GlobalClientVersion string `json:"global_client_version"`
+		// PassthroughIP 是否透传客户端真实 IP 给上游。
+		PassthroughIP bool `json:"passthrough_ip"`
 	} `json:"upstream"`
 
 	Features struct {
@@ -218,6 +226,20 @@ func applyEnv(c *Config) {
 	}
 	if v := os.Getenv("WB2A_USER_AGENT"); v != "" {
 		c.Upstream.UserAgent = v
+	}
+	if v := os.Getenv("WB2A_CLIENT_VERSION"); v != "" {
+		c.Upstream.ClientVersion = v
+	}
+	if v := os.Getenv("WB2A_CLI_VERSION"); v != "" {
+		c.Upstream.CliVersion = v
+	}
+	if v := os.Getenv("WB2A_GLOBAL_CLIENT_VERSION"); v != "" {
+		c.Upstream.GlobalClientVersion = v
+	}
+	if v := os.Getenv("WB2A_PASSTHROUGH_IP"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			c.Upstream.PassthroughIP = b
+		}
 	}
 	if v := os.Getenv("WB2A_SANITIZE_FINGERPRINTS"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {

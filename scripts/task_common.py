@@ -12,7 +12,24 @@
 """
 import json, os, time, glob, urllib.request, urllib.error
 
-AUTHS = "/root/workbuddy2api/auths"
+
+def _resolve_auths_dir() -> str:
+    """解析 auths 凭证目录：WB2A_AUTHS > 仓库根 auths/ > /root/workbuddy2api/auths 兜底。
+
+    env 显式覆盖最优先；本地仓库 auths/ 按 __file__ 自定位（脚本位于 scripts/ 下，
+    仓库根为其上两级），非 Linux 部署（auth 不在 /root/workbuddy2api）自动回落
+    本地 auths/；兜底保持 Linux 服务器行为不变。
+    """
+    env = os.environ.get("WB2A_AUTHS")
+    if env:
+        return env
+    local = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "auths")
+    if os.path.isdir(local):
+        return local
+    return "/root/workbuddy2api/auths"
+
+
+AUTHS = _resolve_auths_dir()
 CHAT_BASE = "https://copilot.tencent.com"   # growth / tasks / buddy / streak / chat
 BILL_BASE = "https://www.codebuddy.cn"      # report / billing
 
@@ -181,14 +198,19 @@ def report_activity(auth, count=1, gap=1.05, model_id="deepseek-v4-flash",
 
 
 def chat_completion(auth, model_id="glm-5.2", prompt="hi", max_tokens=32,
-                    timeout=60) -> tuple:
+                    timeout=60, extra_var=None) -> tuple:
     """POST {chat}/v2/chat/completions 真实对话一次（stream:true）。
 
     服务端强制流式（payload.go 同款口径），这里逐行读 SSE 直到 done。
     返回 (status, first_content)。用于 Model_chat_GLM5.2 的“真实对话一次”。
+
+    extra_var（可选）：顶层 extra_vars 覆盖/新增字段（如 growthEvent），
+    模拟桌面端 requestOptions.providerData 的透传形状。
     """
     body = {"model": model_id, "messages": [{"role": "user", "content": prompt}],
             "stream": True, "max_tokens": max_tokens}
+    if extra_var:
+        body["extra_vars"] = {**(body.get("extra_vars") or {}), **extra_var}
     hdr = {"Accept": "text/event-stream"}  # SSE
     url = chat_base(auth) + PATH_CHAT
     req_headers = _headers(auth)

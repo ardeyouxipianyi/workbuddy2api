@@ -265,6 +265,17 @@ type Client struct {
 	// （指纹净化考虑），仅当用户显式配置才改写。
 	UserAgent string
 
+	// ClientVersion 国内版客户端版本覆盖（空 = 默认 5.5.6）
+	ClientVersion string
+	// CliVersion 国内版 CLI 版本覆盖（空 = 默认 2.137.1）
+	CliVersion string
+	// GlobalClientVersion 国际版客户端版本覆盖（空 = 默认 5.5.2）
+	GlobalClientVersion string
+
+	// PassthroughIP 是否透传客户端 IP（X-Forwarded-For/X-Real-IP 首段）给上游。
+	// 缺省 false；按请求参数传入 ChatStream，杜绝共享字段并发竞态。
+	PassthroughIP bool
+
 	ChatBaseCN    string
 	BillingBaseCN string
 
@@ -479,13 +490,13 @@ func (c *Client) RefreshToken(a *auth.Auth) error {
 // ChatStream 发 chat 请求并返回原始 SSE body 流（调用方负责 Close）。
 // 非 2xx 时 rc 为 nil、body 为上游响应体（供调用方 Classify(status, string(body))）、err 为 nil；
 // 只有传输层失败才返回 err。
-func (c *Client) ChatStream(a *auth.Auth, body []byte) (rc io.ReadCloser, status int, respBody []byte, err error) {
+func (c *Client) ChatStream(a *auth.Auth, body []byte, clientIP string) (rc io.ReadCloser, status int, respBody []byte, err error) {
 	url := c.chatURL(a)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(c.prepareBodyFor(a, body)))
 	if err != nil {
 		return nil, 0, nil, err
 	}
-	c.ChatHeaders(req, a)
+	c.ChatHeaders(req, a, clientIP)
 	ctx, cancel := context.WithCancel(context.Background())
 	req = req.WithContext(ctx)
 	resp, err := c.chatHTTP().Do(req)
@@ -724,7 +735,7 @@ func (c *Client) probeGlobalModel(a *auth.Auth, model string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	c.ChatHeaders(req, a)
+	c.ChatHeaders(req, a, "")
 	resp, err := c.chatHTTP().Do(req)
 	if err != nil {
 		return false, err

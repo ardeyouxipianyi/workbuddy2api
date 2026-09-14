@@ -218,7 +218,10 @@ func (p *Pool) ServableNow() bool {
 	defer p.mu.RUnlock()
 	now := time.Now()
 	for _, e := range p.byUID {
-		if e.healthy(now) && !p.inFlightFull(e) {
+		if p.inFlightFull(e) {
+			continue
+		}
+		if e.healthy(now) || e.modelExempt() {
 			return true
 		}
 	}

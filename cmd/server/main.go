@@ -94,6 +94,10 @@ func main() {
 	up.SanitizeFingerprints = cfg.Features.SanitizeBlacklistFingerprints
 	// 出站 UA 覆盖（issue #42）：非空才改写，空 = 现状 clientUA（指纹净化考虑）。
 	up.UserAgent = cfg.Upstream.UserAgent
+	up.ClientVersion = cfg.Upstream.ClientVersion
+	up.CliVersion = cfg.Upstream.CliVersion
+	up.GlobalClientVersion = cfg.Upstream.GlobalClientVersion
+	up.PassthroughIP = cfg.Upstream.PassthroughIP
 
 	sch := scheduler.New(scheduler.Config{
 		Pool:              p,
